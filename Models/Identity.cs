@@ -12,13 +12,13 @@ namespace TokenService.Models
 		internal const string DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "hax";
 		internal const string DB_KEY_TOKENS = "tkn";
 
-		public const string FRIENDLY_KEY_ACCOUNT_ID = "AccountId";
-		public const string FRIENDLY_KEY_AUTH_ATTEMPTS = "Authorizations";
-		public const string FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS = "FailedAuthorizations";
-		public const string FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "FailedAdminAuthorizations";
-		public const string FRIENDLY_KEY_SCREEN_NAME = "ScreenName";
-		public const string FRIENDLY_KEY_DISCRIMINATOR = "Discriminator";
-		public const string FRIENDLY_KEY_TOKENS = "Tokens";
+		public const string FRIENDLY_KEY_ACCOUNT_ID = "accountId";
+		public const string FRIENDLY_KEY_AUTH_ATTEMPTS = "authorizations";
+		public const string FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS = "failedAuthorizations";
+		public const string FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "failedAdminAuthorizations";
+		public const string FRIENDLY_KEY_SCREEN_NAME = "screenName";
+		public const string FRIENDLY_KEY_DISCRIMINATOR = "discriminator";
+		public const string FRIENDLY_KEY_TOKENS = "tokens";
 		
 		[BsonElement(DB_KEY_ACCOUNT_ID)]
 		[JsonProperty(PropertyName = FRIENDLY_KEY_ACCOUNT_ID, NullValueHandling = NullValueHandling.Include)]

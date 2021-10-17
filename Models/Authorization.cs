@@ -25,31 +25,32 @@ namespace TokenService.Models
 		
 		[BsonElement(DB_KEY_ISSUER)]
 		[JsonProperty(FRIENDLY_KEY_ISSUER, NullValueHandling = NullValueHandling.Include)]
-		public string Issuer { get; private set; }
+		public string Issuer { get; internal set; }
 		[BsonElement(DB_KEY_REQUESTER)]
 		[JsonProperty(FRIENDLY_KEY_REQUESTER, NullValueHandling = NullValueHandling.Include)]
-		public string Requester { get; private set; }
+		public string Requester { get; internal set; }
 		[BsonElement(DB_KEY_TOKEN)]
 		[JsonProperty(FRIENDLY_KEY_TOKEN, NullValueHandling = NullValueHandling.Include)]
-		public string EncryptedToken { get; private set; }
+		public string EncryptedToken { get; internal set; }
 		
 		[BsonElement(DB_KEY_IS_ADMIN), BsonIgnoreIfDefault]
 		[JsonProperty(FRIENDLY_KEY_IS_ADMIN, DefaultValueHandling = DefaultValueHandling.Ignore)]
-		public bool IsAdmin { get; private set; }
+		public bool IsAdmin { get; internal set; }
 		[BsonElement(DB_KEY_IS_VALID)]
 		[JsonProperty(FRIENDLY_KEY_IS_VALID, DefaultValueHandling = DefaultValueHandling.Include)]
-		public bool IsValid { get; private set; }
+		public bool IsValid { get; internal set; }
 		[BsonElement(DB_KEY_EXPIRATION)]
 		[JsonProperty(FRIENDLY_KEY_EXPIRATION, DefaultValueHandling = DefaultValueHandling.Include)]
-		public long Expiration { get; private set; }
+		public long Expiration { get; internal set; }
 		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
 		[JsonProperty(FRIENDLY_KEY_CREATED, DefaultValueHandling = DefaultValueHandling.Ignore)]
-		public long Created { get; private set; }
+		public long Created { get; internal set; }
 		
 		[BsonIgnore]
 		[JsonIgnore]
 		public long SecondsRemaining => Expiration - Created;
 		
+		// TODO: Privatize
 		
 		// public string RemoteAddress { get; private set; }
 		// public string GeoIpAddress { get; private set; }

@@ -1,3 +1,4 @@
+using MongoDB.Driver;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
 
@@ -6,5 +7,7 @@ namespace TokenService.Services
 	public class IdentityService : PlatformMongoService<Identity>
 	{
 		public IdentityService() : base("identities") { }
+
+		public Identity Find(string accountId) => _collection.Find(i => i.AccountId == accountId).FirstOrDefault();
 	}
 }

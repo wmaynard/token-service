@@ -7,13 +7,17 @@
 
 	<ItemGroup>
 	  <Folder Include="Exceptions" />
-	  <Folder Include="Services" />
 	  <Folder Include="Utilities" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.11" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.31" />
+	  <PackageReference Include="MongoDB.Driver" Version="2.13.0" />
+	  <PackageReference Include="MongoDB.Driver.Core" Version="2.13.0" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\platform-csharp-common\platform-csharp-common.csproj" />
 	</ItemGroup>
 
 </Project>

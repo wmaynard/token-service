@@ -3,7 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
 using TokenService.Services;
-using TokenService.Utilities;
 
 namespace TokenService.Controllers
 {
@@ -12,6 +11,7 @@ namespace TokenService.Controllers
 	/// Consequently, the Token property will never be available to controllers.
 	/// This base class restores that functionality by hiding the base Token and replacing it
 	/// with its own.
+	/// TODO: Find an elegant way to remove PlatformAuthorizationFilter from this service.
 	/// </summary>
 	public class TokenAuthController : PlatformController
 	{
@@ -33,11 +33,6 @@ namespace TokenService.Controllers
 		public TokenAuthController(IdentityService identityService, IConfiguration config) : base(config)
 		{
 			_identityService = identityService;
-		}
-
-		public UnauthorizedResult Unauthorized()
-		{
-			return base.Unauthorized();
 		}
 
 		public override ActionResult HealthCheck()

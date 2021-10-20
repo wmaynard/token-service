@@ -10,7 +10,7 @@ namespace TokenService.Models
 	{
 		internal const int MAX_AUTHORIZATIONS_KEPT = 10;
 		
-		internal const string DB_KEY_AUTH_ATTEMPTS = "chx";
+		internal const string DB_KEY_AUTH_ATTEMPTS = "chx"; // TODO: Aliases
 		internal const string DB_KEY_EMAIL = "e";
 		internal const string DB_KEY_FAILED_AUTH_ATTEMPTS = "outs";
 		internal const string DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "hax";

@@ -1,44 +1,57 @@
 using System;
 using System.Linq;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.CSharp.Common.Interop;
+using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	[ApiController, Route("tokens")]
+	// Normally, platform services have a TopController class.  This service is so small that
+	// IdentityController acts as that TopController for now.
+	[ApiController, Route("")]
 	public class IdentityController : TokenAuthController
 	{
-		public const string KEY_ADMIN_SECRET = "admin";
+		public const string KEY_ADMIN_SECRET = "key";
 		public IdentityController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
 		
-		[HttpGet, Route("validate"), NoAuth]
+		[HttpGet, Route("token/validate"), NoAuth]
 		public ActionResult Validate() // TODO: common | EncryptedToken
 		{
 			if (Token.IsExpired)
-				return Problem("expired");
+				throw new AuthException(Token, "Token has expired.");
 
 			Identity id = _identityService.Find(Token.AccountId);
 			if (id.Banned)
-				return Problem("banned");
+				throw new AuthException(Token, "Account was banned.");
 			
-			Authorization authorization = id.Authorizations.First(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
+			Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
 
+			if (authorization == null)
+				throw new AuthException(Token, "Too many new tokens have been generated for this account.");
 			if (!authorization.IsValid)
-				return Problem("invalidated");
+				throw new AuthException(Token, "Token was invalidated.");
 
+			string name = Token.IsAdmin
+				? "admin-tokens-validated"
+				: "tokens-validated";
+			Graphite.Track(name, 1);
+			
 			return Ok(Token.ResponseObject);
 		}
 
-		[HttpPost, Route("generate"), NoAuth]
+		[Route("secured/generateToken")]
+		[HttpPost, Route("token/generate"), NoAuth]
 		public ObjectResult Generate()
 		{
 			string id = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
-			string screenName = Require<string>(TokenInfo.FRIENDLY_KEY_SCREENNAME);
-			int disc = Require<int>(TokenInfo.FRIENDLY_KEY_DISCRIMINATOR);
+			string screenName = Optional<string>(TokenInfo.FRIENDLY_KEY_SCREENNAME);
+			int disc = Optional<int?>(TokenInfo.FRIENDLY_KEY_DISCRIMINATOR) ?? -1;
 			string origin = Require<string>(Authorization.FRIENDLY_KEY_ORIGIN);
 			string email = Optional<string>(Identity.FRIENDLY_KEY_EMAIL);
 			long lifetime = Optional<long>("days");
@@ -52,12 +65,14 @@ namespace TokenService.Controllers
 				ScreenName = screenName,
 				Discriminator = disc,
 				IsAdmin = isAdmin,
-				Issuer = Authorization.ISSUER
+				Issuer = Authorization.ISSUER,
+				IpAddress = IpAddress
 			};
 
 			Identity identity = _identityService.Find(id);
 			if (identity == null)
 			{
+				Log.Info(Owner.Default, "Token record created for account.", data: new { AccountId = id});
 				identity = new Identity(id, info, email);
 				_identityService.Create(identity);
 			}
@@ -73,6 +88,7 @@ namespace TokenService.Controllers
 			return Ok(auth.ResponseObject, info.ResponseObject);
 		}
 
+		[HttpGet, Route("health")]
 		public override ActionResult HealthCheck()
 		{
 			return Ok(_identityService.HealthCheckResponseObject);

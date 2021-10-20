@@ -9,6 +9,8 @@ using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.CSharp.Common.Interop;
+using TokenService.Exceptions;
 
 namespace TokenService.Models
 {
@@ -118,7 +120,7 @@ namespace TokenService.Models
 					IssuerSigningKeys = new[] {new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SIGNATURE))},
 					ValidateLifetime = true,
 					RequireExpirationTime = true,
-					ClockSkew = TimeSpan.FromHours(12)
+					ClockSkew = TimeSpan.FromHours(12) // TODO: not sure what this does and can probably remove it or lower it, but it was in the example I found
 				};
 			
 				ClaimsPrincipal cp = new JwtSecurityTokenHandler().ValidateToken(token, tvp, out SecurityToken validatedToken);
@@ -146,7 +148,11 @@ namespace TokenService.Models
 			}
 			catch (SecurityTokenInvalidSignatureException e)
 			{
-				Console.WriteLine(e);
+				Log.Critical(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
+				{
+					EncryptedToken = token
+				}, exception: e);
+				Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
 				throw;
 			}
 
@@ -161,10 +167,12 @@ namespace TokenService.Models
 
 			List<Claim> claims = new List<Claim>()
 			{
-				new Claim(type: TokenInfo.DB_KEY_ACCOUNT_ID, value: info.AccountId),
-				new Claim(type: TokenInfo.DB_KEY_SCREENNAME, value: info.ScreenName),
-				new Claim(type: TokenInfo.DB_KEY_DISCRIMINATOR, value: info.Discriminator.ToString())
+				new Claim(type: TokenInfo.DB_KEY_ACCOUNT_ID, value: info.AccountId)
 			};
+			if (info.ScreenName != null)
+				claims.Add(new Claim(type: TokenInfo.DB_KEY_SCREENNAME, value: info.ScreenName));
+			if (info.Discriminator > 0)
+				claims.Add(new Claim(type: TokenInfo.DB_KEY_DISCRIMINATOR, value: info.Discriminator.ToString()));
 			// if (!string.IsNullOrWhiteSpace(info.Email))
 			// 	claims.Add(new Claim(type: UserInfo.DB_KEY_EMAIL, value: info.Email));
 			if (!string.IsNullOrWhiteSpace(info.IpAddress))
@@ -183,13 +191,18 @@ namespace TokenService.Models
 				SigningCredentials = credentials
 			};
 			
+			
+			Graphite.Track("tokens-generated", 1);
+			if (isAdmin)
+			{
+				Log.Info(Owner.Default, "Admin token generated.");
+				Graphite.Track("admin-tokens-generated", 1);
+			}
+			
 			return new JwtSecurityTokenHandler().CreateEncodedJwt(descriptor);
 		}
-		
-		// public string RemoteAddress { get; private set; }
-		// public string GeoIpAddress { get; private set; }
-		// public string Country { get; private set; }
 
+		// Other fields that player service was tracking:
 		// remoteAddress, geoipAddress, country, serverTime, accountId, requestId?, token
 	}
 }

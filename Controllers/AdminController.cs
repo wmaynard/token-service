@@ -10,7 +10,7 @@ using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	[ApiController, Route("tokens/admin")]
+	[ApiController, Route("token/admin")]
 	public class AdminController : TokenAuthController
 	{
 		public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }

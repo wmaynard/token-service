@@ -98,6 +98,6 @@ scan_repo:
       - $CI_COMMIT_REF_SLUG.$CI_COMMIT_SHA.html
     expire_in: 1 week
 
-# include:
-  # - '/.gitlab/deploy-eb.yaml'
+include:
   - '/.gitlab/deploy-k8s.yaml'
+  # - '/.gitlab/deploy-eb.yaml'

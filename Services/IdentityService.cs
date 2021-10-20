@@ -2,7 +2,6 @@ using System.Threading.Tasks;
 using MongoDB.Driver;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
-using TokenService.Utilities;
 
 namespace TokenService.Services
 {

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
 using TokenService.Services;
+using TokenService.Utilities;
 
 namespace TokenService.Controllers
 {
@@ -32,6 +33,11 @@ namespace TokenService.Controllers
 		public TokenAuthController(IdentityService identityService, IConfiguration config) : base(config)
 		{
 			_identityService = identityService;
+		}
+
+		public UnauthorizedResult Unauthorized()
+		{
+			return base.Unauthorized();
 		}
 
 		public override ActionResult HealthCheck()

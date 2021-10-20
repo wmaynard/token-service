@@ -14,7 +14,7 @@ namespace TokenService.Models
 {
 	public class Authorization : PlatformDataModel
 	{
-		private const string ISSUER = "Rumble Token Service";
+		internal const string ISSUER = "Rumble Token Service";
 		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SECRET");
 		internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
 		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_GUKEY");
@@ -76,12 +76,11 @@ namespace TokenService.Models
 			IsAdmin = isAdmin;
 			IsValid = true;
 			
-			EncryptedToken = GenerateToken(info, IsAdmin);
 			Origin = origin;
 
 			lifetimeDays = IsAdmin
-				? lifetimeDays
-				: Math.Min(4, lifetimeDays);
+				? Math.Min(3650, lifetimeDays) // Maximum lifetime of 10 years.
+				: Math.Min(5, lifetimeDays); // Maximum lifetime of 5 days.
 			
 			DateTimeOffset now = DateTimeOffset.Now;
 			Created = now.ToUnixTimeSeconds();
@@ -98,6 +97,8 @@ namespace TokenService.Models
 				});
 				Expiration = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
 			}
+			
+			EncryptedToken = GenerateToken(info, IsAdmin);
 		}
 
 		internal static TokenInfo Decode(string token)
@@ -128,6 +129,7 @@ namespace TokenService.Models
 				bool admin = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString();
 				string issuer = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER);
 				string ip = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS);
+				long exp = long.Parse(cp.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION));
 
 				TokenInfo output = new TokenInfo(token)
 				{
@@ -135,7 +137,7 @@ namespace TokenService.Models
 					ScreenName = sn,
 					Discriminator = disc,
 					IsAdmin = admin,
-					Expiration = 0,
+					Expiration = exp,
 					Issuer = issuer,
 					IpAddress = ip
 				};
@@ -176,7 +178,7 @@ namespace TokenService.Models
 				Issuer = ISSUER,
 				IssuedAt = DateTime.UtcNow,
 				NotBefore = DateTime.UtcNow,
-				Expires = DateTime.UtcNow.AddDays(4),
+				Expires = DateTime.UnixEpoch.AddSeconds(Expiration),
 				Subject = new ClaimsIdentity(claims),
 				SigningCredentials = credentials
 			};

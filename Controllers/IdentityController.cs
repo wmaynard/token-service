@@ -1,6 +1,8 @@
 using System;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
 using TokenService.Services;
@@ -12,30 +14,26 @@ namespace TokenService.Controllers
 	{
 		public const string KEY_ADMIN_SECRET = "admin";
 		public IdentityController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
-
-		[HttpPatch, Route("admin/ban")]
-		public ObjectResult Ban()
+		
+		[HttpGet, Route("validate"), NoAuth]
+		public ActionResult Validate() // TODO: common | EncryptedToken
 		{
-			return Ok();
+			if (Token.IsExpired)
+				return Problem("expired");
+
+			Identity id = _identityService.Find(Token.AccountId);
+			if (id.Banned)
+				return Problem("banned");
+			
+			Authorization authorization = id.Authorizations.First(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
+
+			if (!authorization.IsValid)
+				return Problem("invalidated");
+
+			return Ok(Token.ResponseObject);
 		}
 
-		[HttpPatch, Route("admin/invalidate")]
-		public ObjectResult Invalidate()
-		{
-			string aid = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
-
-			Identity identity = _identityService.Find(aid);
-
-			return Ok();
-		}
-
-		[HttpGet, Route("validate")]
-		public ObjectResult Validate() // TODO: common | EncryptedToken
-		{
-			return Ok(Authorization.Decode(EncryptedToken).ResponseObject);
-		}
-
-		[HttpPost, Route("generate")]
+		[HttpPost, Route("generate"), NoAuth]
 		public ObjectResult Generate()
 		{
 			string id = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
@@ -53,7 +51,8 @@ namespace TokenService.Controllers
 				AccountId = id,
 				ScreenName = screenName,
 				Discriminator = disc,
-				IsAdmin = isAdmin
+				IsAdmin = isAdmin,
+				Issuer = Authorization.ISSUER
 			};
 
 			Identity identity = _identityService.Find(id);
@@ -64,12 +63,14 @@ namespace TokenService.Controllers
 			}
 
 			Authorization auth = new Authorization(info, origin, lifetime, isAdmin);
-			
+			info.Expiration = auth.Expiration;
+
 			identity.LatestUserInfo = info;
-			identity.Tokens.Add(auth);
+			identity.Authorizations.Add(auth);
+			identity.Authorizations = identity.Authorizations.TakeLast(Identity.MAX_AUTHORIZATIONS_KEPT).ToList();
 			_identityService.Update(identity);
 
-			return Ok(auth.ResponseObject);
+			return Ok(auth.ResponseObject, info.ResponseObject);
 		}
 
 		public override ActionResult HealthCheck()

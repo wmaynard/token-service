@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Rumble.Platform.Common.Filters;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 
@@ -16,6 +17,9 @@ namespace TokenService
 	{
 		public void ConfigureServices(IServiceCollection services)
 		{
+			// Since this service is the authority on tokens, it doesn't make sense to ping itself with web requests to validate tokens.
+			// This allows us to avoid the (minor) performance hit for checking auth validations.
+			FilterBypass<PlatformAuthorizationFilter>();
 #if DEBUG
 			base.ConfigureServices(services, defaultOwner: Owner.Will, warnMS: 5_000, errorMS: 20_000, criticalMS: 300_000);
 #else

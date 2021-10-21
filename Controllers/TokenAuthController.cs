@@ -15,7 +15,7 @@ namespace TokenService.Controllers
 	/// </summary>
 	public class TokenAuthController : PlatformController
 	{
-		private string KEY_USER_INFO = "UserInfo";
+		private const string KEY_USER_INFO = "UserInfo";
 		protected readonly IdentityService _identityService;
 
 		protected new TokenInfo Token

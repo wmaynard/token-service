@@ -1,22 +1,44 @@
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.CSharp.Common.Interop;
+using TokenService.Exceptions;
+using TokenService.Models;
 using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	public class TopController : PlatformController
+	[ApiController, Route("token")]
+	public class TopController : TokenAuthController
 	{
-		private readonly IdentityService _identityService;
-		public TopController(IdentityService identityService, IConfiguration config) : base(config)
+		public TopController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
+		
+		[HttpGet, Route("validate")]
+		public ActionResult Validate() // TODO: common | EncryptedToken
 		{
-			_identityService = identityService;
-		}
+			if (Token.IsExpired)
+				throw new AuthException(Token, "Token has expired.");
 
-		[HttpGet, Route("health")]
-		public override ActionResult HealthCheck()
-		{
-			return Ok(_identityService.HealthCheckResponseObject);
+			Identity id = _identityService.Find(Token.AccountId);
+			if (id.Banned)
+				throw new AuthException(Token, "Account was banned.");
+			
+			Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
+
+			if (authorization == null)
+				throw new AuthException(Token, "Too many new tokens have been generated for this account.");
+			if (!authorization.IsValid)
+				throw new AuthException(Token, "Token was invalidated.");
+
+			string name = Token.IsAdmin
+				? "admin-tokens-validated"
+				: "tokens-validated";
+			Graphite.Track(name, 1);
+			
+			return Ok(Token.ResponseObject);
 		}
+		
+		// /health is in the base, TokenAuthController
 	}
 }

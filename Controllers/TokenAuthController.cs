@@ -11,9 +11,8 @@ namespace TokenService.Controllers
 	/// Consequently, the Token property will never be available to controllers.
 	/// This base class restores that functionality by hiding the base Token and replacing it
 	/// with its own.
-	/// TODO: Find an elegant way to remove PlatformAuthorizationFilter from this service.
 	/// </summary>
-	public class TokenAuthController : PlatformController
+	public abstract class TokenAuthController : PlatformController
 	{
 		private const string KEY_USER_INFO = "UserInfo";
 		protected readonly IdentityService _identityService;
@@ -30,14 +29,12 @@ namespace TokenService.Controllers
 				return stored;
 			}
 		}
-		public TokenAuthController(IdentityService identityService, IConfiguration config) : base(config)
+		protected TokenAuthController(IdentityService identityService, IConfiguration config) : base(config)
 		{
 			_identityService = identityService;
 		}
 
-		public override ActionResult HealthCheck()
-		{
-			throw new System.NotImplementedException();
-		}
+		[HttpGet, Route("health")]
+		public override ActionResult HealthCheck() => Ok(_identityService.HealthCheckResponseObject);
 	}
 }

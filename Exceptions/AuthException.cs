@@ -7,9 +7,8 @@ namespace TokenService.Exceptions
 	public class AuthException : PlatformException
 	{
 		public const string GRAPHITE_KEY_ERRORS = "auth-errors";
-		
-		public TokenInfo Token { get; private set; }
 		public string Reason { get; private set; }
+		public TokenInfo Token { get; private set; }
 
 		public AuthException(TokenInfo token, string reason) : base("Token is invalid.")
 		{

@@ -1,52 +1,20 @@
-using System;
 using System.Linq;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.CSharp.Common.Interop;
-using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	// Normally, platform services have a TopController class.  This service is so small that
-	// IdentityController acts as that TopController for now.
-	[ApiController, Route("")]
-	public class IdentityController : TokenAuthController
+	[ApiController, Route("secured")]
+	public class SecuredController : TokenAuthController
 	{
 		public const string KEY_ADMIN_SECRET = "key";
-		public IdentityController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
+		public SecuredController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
 		
-		[HttpGet, Route("token/validate"), NoAuth]
-		public ActionResult Validate() // TODO: common | EncryptedToken
-		{
-			if (Token.IsExpired)
-				throw new AuthException(Token, "Token has expired.");
-
-			Identity id = _identityService.Find(Token.AccountId);
-			if (id.Banned)
-				throw new AuthException(Token, "Account was banned.");
-			
-			Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
-
-			if (authorization == null)
-				throw new AuthException(Token, "Too many new tokens have been generated for this account.");
-			if (!authorization.IsValid)
-				throw new AuthException(Token, "Token was invalidated.");
-
-			string name = Token.IsAdmin
-				? "admin-tokens-validated"
-				: "tokens-validated";
-			Graphite.Track(name, 1);
-			
-			return Ok(Token.ResponseObject);
-		}
-
-		[Route("secured/generateToken")]
-		[HttpPost, Route("token/generate"), NoAuth]
+		[HttpPost, Route("token/generate")]
 		public ObjectResult Generate()
 		{
 			string id = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
@@ -86,12 +54,6 @@ namespace TokenService.Controllers
 			_identityService.Update(identity);
 
 			return Ok(auth.ResponseObject, info.ResponseObject);
-		}
-
-		[HttpGet, Route("health")]
-		public override ActionResult HealthCheck()
-		{
-			return Ok(_identityService.HealthCheckResponseObject);
 		}
 	}
 }

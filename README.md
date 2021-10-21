@@ -69,7 +69,7 @@ All `/admin` endpoints require a valid admin token.
 
 ### Parameter breakdown for `/generateToken`:
 * `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
-* `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5; larger values will be ignored.
+* `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5 and for admin tokens is 3650 (ten years); larger values will be ignored.
 * `email`: The email address for an account.  This value is stored in Mongo along with the account, but is not embedded in the token.
 * `key`: The Rumble Key.  If the name is confusing, it's supposed to be.
 * `origin`: Where the request is coming from (e.g. Tower Game Server, Publishing App, etc).

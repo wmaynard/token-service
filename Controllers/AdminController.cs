@@ -14,22 +14,6 @@ namespace TokenService.Controllers
 	public class AdminController : TokenAuthController
 	{
 		public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
-
-		[HttpPatch, Route("unban")]
-		public ActionResult Unban()
-		{
-			if (!Token.IsAdmin)
-				throw new AuthException(Token, "Admin privileges required.");
-			Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
-			if (!id.Banned)
-				Log.Warn(Owner.Default, "Tried to unban a user that wasn't banned.", data: new { AccountId = id.AccountId, Admin = Token});
-			id.Banned = false;
-			_identityService.Update(id);
-			
-			Log.Info(Owner.Default, "A user was unbanned.", data: new { AccountId = id.AccountId, Admin = Token });
-			
-			return Ok(id.ResponseObject);
-		}
 		
 		[HttpPatch, Route("ban")]
 		public ActionResult Ban()
@@ -61,6 +45,22 @@ namespace TokenService.Controllers
 			
 			Log.Info(Owner.Default, "A user's active sessions have been invalidated.", data: new { AccountId = id.AccountId, Admin = Token });
 
+			return Ok(id.ResponseObject);
+		}
+		
+		[HttpPatch, Route("unban")]
+		public ActionResult Unban()
+		{
+			if (!Token.IsAdmin)
+				throw new AuthException(Token, "Admin privileges required.");
+			Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
+			if (!id.Banned)
+				Log.Warn(Owner.Default, "Tried to unban a user that wasn't banned.", data: new { AccountId = id.AccountId, Admin = Token});
+			id.Banned = false;
+			_identityService.Update(id);
+			
+			Log.Info(Owner.Default, "A user was unbanned.", data: new { AccountId = id.AccountId, Admin = Token });
+			
 			return Ok(id.ResponseObject);
 		}
 	}

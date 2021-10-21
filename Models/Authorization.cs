@@ -4,6 +4,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
@@ -17,54 +18,57 @@ namespace TokenService.Models
 	public class Authorization : PlatformDataModel
 	{
 		internal const string ISSUER = "Rumble Token Service";
-		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SIGNATURE");
 		internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
 		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
+		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SIGNATURE");
 
 		private const string CLAIM_KEY_ACCOUNT_ID = "aid";
-		private const string CLAIM_KEY_SCREENNAME = "sn";
 		private const string CLAIM_KEY_DISCRIMINATOR = "d";
 		private const string CLAIM_KEY_IS_ADMIN = "su";
+		private const string CLAIM_KEY_SCREENNAME = "sn";
 		
-		internal const string DB_KEY_ISSUER = "iss";
-		internal const string DB_KEY_ORIGIN = "org";
+		internal const string DB_KEY_CREATED = "ts";
 		internal const string DB_KEY_EXPIRATION = "xp";
-		internal const string DB_KEY_TOKEN = "val";
 		internal const string DB_KEY_IS_ADMIN = "su";
 		internal const string DB_KEY_IS_VALID = "ok";
-		internal const string DB_KEY_CREATED = "ts";
+		internal const string DB_KEY_ISSUER = "iss";
+		internal const string DB_KEY_ORIGIN = "org";
+		internal const string DB_KEY_TOKEN = "val";
 
+		public const string FRIENDLY_KEY_CREATED = "created";
+		public const string FRIENDLY_KEY_EXPIRATION = "expiration";
+		public const string FRIENDLY_KEY_IS_ADMIN = "isAdmin";
+		public const string FRIENDLY_KEY_IS_VALID = "isValid";
 		public const string FRIENDLY_KEY_ISSUER = "issuer";
 		public const string FRIENDLY_KEY_ORIGIN = "origin";
 		public const string FRIENDLY_KEY_TOKEN = "token";
-		public const string FRIENDLY_KEY_IS_ADMIN = "isAdmin";
-		public const string FRIENDLY_KEY_IS_VALID = "isValid";
-		public const string FRIENDLY_KEY_EXPIRATION = "expiration";
-		public const string FRIENDLY_KEY_CREATED = "created";
-		public const string FRIENDLY_KEY_REMAINING = "secondsRemaining";
 		
-		[BsonElement(DB_KEY_ISSUER)]
-		[JsonProperty(FRIENDLY_KEY_ISSUER, NullValueHandling = NullValueHandling.Include)]
-		public string Issuer { get; private set; }
-		[BsonElement(DB_KEY_ORIGIN)]
-		[JsonProperty(FRIENDLY_KEY_ORIGIN, NullValueHandling = NullValueHandling.Include)]
-		public string Origin { get; internal set; }
+		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
+		[JsonProperty(FRIENDLY_KEY_CREATED, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		public long Created { get; internal set; }
+		
 		[BsonElement(DB_KEY_TOKEN)]
 		[JsonProperty(FRIENDLY_KEY_TOKEN, NullValueHandling = NullValueHandling.Include)]
 		public string EncryptedToken { get; internal set; }
+		[BsonElement(DB_KEY_EXPIRATION)]
+		[JsonProperty(FRIENDLY_KEY_EXPIRATION, DefaultValueHandling = DefaultValueHandling.Include)]
+		public long Expiration { get; internal set; }
 		
 		[BsonElement(DB_KEY_IS_ADMIN), BsonIgnoreIfDefault]
 		[JsonProperty(FRIENDLY_KEY_IS_ADMIN, DefaultValueHandling = DefaultValueHandling.Ignore)]
 		public bool IsAdmin { get; private set; }
+		
 		[BsonElement(DB_KEY_IS_VALID)]
 		[JsonProperty(FRIENDLY_KEY_IS_VALID, DefaultValueHandling = DefaultValueHandling.Include)]
 		public bool IsValid { get; internal set; }
-		[BsonElement(DB_KEY_EXPIRATION)]
-		[JsonProperty(FRIENDLY_KEY_EXPIRATION, DefaultValueHandling = DefaultValueHandling.Include)]
-		public long Expiration { get; internal set; }
-		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
-		[JsonProperty(FRIENDLY_KEY_CREATED, DefaultValueHandling = DefaultValueHandling.Ignore)]
-		public long Created { get; internal set; }
+		
+		[BsonElement(DB_KEY_ISSUER)]
+		[JsonProperty(FRIENDLY_KEY_ISSUER, NullValueHandling = NullValueHandling.Include)]
+		public string Issuer { get; private set; }
+		
+		[BsonElement(DB_KEY_ORIGIN)]
+		[JsonProperty(FRIENDLY_KEY_ORIGIN, NullValueHandling = NullValueHandling.Include)]
+		public string Origin { get; internal set; }
 		
 		[BsonIgnore]
 		[JsonIgnore]
@@ -103,6 +107,11 @@ namespace TokenService.Models
 			EncryptedToken = GenerateToken(info, IsAdmin);
 		}
 
+		/// <summary>
+		/// Decodes and validates an encrypted token.
+		/// </summary>
+		/// <param name="token">The token to decode.</param>
+		/// <returns>Information that was embedded in the token.</returns>
 		internal static TokenInfo Decode(string token)
 		{
 			token = token.Replace("Bearer ", "");
@@ -122,9 +131,9 @@ namespace TokenService.Models
 					RequireExpirationTime = true,
 					ClockSkew = TimeSpan.Zero
 				};
-			
+
 				ClaimsPrincipal claims = new JwtSecurityTokenHandler().ValidateToken(token, tokenParameters, out SecurityToken validToken);
-				
+
 				TokenInfo output = new TokenInfo(token)
 				{
 					AccountId = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ACCOUNT_ID),
@@ -145,7 +154,16 @@ namespace TokenService.Models
 					EncryptedToken = token
 				}, exception: e);
 				Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
-				throw;
+				throw new AuthException(null, "Signature mismatch");
+			}
+			catch (SecurityTokenInvalidAudienceException e)
+			{
+				Log.Error(Owner.Default, "Token audience mismatch.", data: new
+				{
+					Actual = Obscure(e.InvalidAudience),
+					Expected = Obscure(AUDIENCE)
+				});
+				throw new AuthException(null, "Audience mismatch.");
 			}
 
 		}
@@ -182,8 +200,7 @@ namespace TokenService.Models
 				Subject = new ClaimsIdentity(claims),
 				SigningCredentials = credentials
 			};
-			
-			
+
 			Graphite.Track("tokens-generated", 1);
 			if (isAdmin)
 			{
@@ -194,6 +211,15 @@ namespace TokenService.Models
 			return new JwtSecurityTokenHandler().CreateEncodedJwt(descriptor);
 		}
 
+		/// <summary>
+		/// Partially obscures a sensitive string for logging or otherwise visible purposes.  Values at the beginning and end remain visible.
+		/// TODO: this might be useful in platform-common
+		/// </summary>
+		/// <param name="sensitive">The string to partially hide.</param>
+		/// <param name="length">The number of characters at BOTH beginning and end to display.</param>
+		/// <returns>A string in the format "foo...bar", where the ellipsis replaces everything in the middle of the string.</returns>
+		private static string Obscure(string sensitive, int length = 4) => sensitive.Length > length * 2 ? $"{sensitive[..length]}...{sensitive[^length..]}" : "too_short";
+		
 		// Other fields that player service was tracking:
 		// remoteAddress, geoipAddress, country, serverTime, accountId, requestId?, token
 	}

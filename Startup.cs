@@ -19,7 +19,7 @@ namespace TokenService
 		{
 			// Since this service is the authority on tokens, it doesn't make sense to ping itself with web requests to validate tokens.
 			// This allows us to avoid the (minor) performance hit for checking auth validations.
-			FilterBypass<PlatformAuthorizationFilter>();
+			BypassFilter<PlatformAuthorizationFilter>();
 #if DEBUG
 			base.ConfigureServices(services, defaultOwner: Owner.Will, warnMS: 5_000, errorMS: 20_000, criticalMS: 300_000);
 #else

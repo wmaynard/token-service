@@ -17,9 +17,9 @@ namespace TokenService.Models
 	public class Authorization : PlatformDataModel
 	{
 		internal const string ISSUER = "Rumble Token Service";
-		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SECRET");
+		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SIGNATURE");
 		internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
-		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_GUKEY");
+		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
 
 		private const string CLAIM_KEY_ACCOUNT_ID = "aid";
 		private const string CLAIM_KEY_SCREENNAME = "sn";
@@ -108,7 +108,7 @@ namespace TokenService.Models
 			token = token.Replace("Bearer ", "");
 			try
 			{
-				TokenValidationParameters tvp = new TokenValidationParameters()
+				TokenValidationParameters tokenParameters = new TokenValidationParameters()
 				{
 					ValidateActor = false,
 					ValidateAudience = true,
@@ -120,28 +120,20 @@ namespace TokenService.Models
 					IssuerSigningKeys = new[] {new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SIGNATURE))},
 					ValidateLifetime = true,
 					RequireExpirationTime = true,
-					ClockSkew = TimeSpan.FromHours(12) // TODO: not sure what this does and can probably remove it or lower it, but it was in the example I found
+					ClockSkew = TimeSpan.Zero
 				};
 			
-				ClaimsPrincipal cp = new JwtSecurityTokenHandler().ValidateToken(token, tvp, out SecurityToken validatedToken);
+				ClaimsPrincipal claims = new JwtSecurityTokenHandler().ValidateToken(token, tokenParameters, out SecurityToken validToken);
 				
-				string aid = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_ACCOUNT_ID);
-				string sn = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_SCREENNAME);
-				int disc = int.Parse(cp.FindFirstValue(claimType: TokenInfo.DB_KEY_DISCRIMINATOR) ?? "0");
-				bool admin = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString();
-				string issuer = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER);
-				string ip = cp.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS);
-				long exp = long.Parse(cp.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION));
-
 				TokenInfo output = new TokenInfo(token)
 				{
-					AccountId = aid,
-					ScreenName = sn,
-					Discriminator = disc,
-					IsAdmin = admin,
-					Expiration = exp,
-					Issuer = issuer,
-					IpAddress = ip
+					AccountId = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ACCOUNT_ID),
+					ScreenName = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_SCREENNAME),
+					Discriminator = int.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_DISCRIMINATOR) ?? "0"),
+					IsAdmin = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString(),
+					Expiration = long.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION)),
+					Issuer = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER),
+					IpAddress = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS)
 				};
 
 				return output;
@@ -160,7 +152,7 @@ namespace TokenService.Models
 
 		private string GenerateToken(TokenInfo info, bool isAdmin = false)
 		{
-			string secret = PlatformEnvironment.Variable("TOKEN_SECRET") ?? throw new ArgumentNullException(); // TODO: Custom Exception, required value flag?
+			string secret = SIGNATURE ?? throw new AuthException(info, "Unable to sign token; no signature available.");
 			
 			SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
 			SigningCredentials credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);

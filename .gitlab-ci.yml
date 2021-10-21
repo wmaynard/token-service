@@ -1,0 +1,103 @@
+variables:
+  # KUBE_INGRESS_BASE_DOMAIN is the application deployment domain and should be set as a variable at the group or project level.
+  KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+  HELM_SCALE_EXTRA_ARGS: --set postgresql.enabled="false"
+
+  K8S_SECRET_GRAPHITE: "$GRAPHITE"
+  K8S_SECRET_LOGGLY_URL: "$LOGGLY_URL"
+  K8S_SECRET_RUMBLE_COMPONENT: "$RUMBLE_COMPONENT"
+  K8S_SECRET_RUMBLE_CONFIG_SERVICE_URL: "$CONFIG_SERVICE_URL"
+  K8S_SECRET_RUMBLE_DEPLOYMENT: "$RUMBLE_DEPLOYMENT"
+  K8S_SECRET_MONGODB_NAME: "$RUMBLE_COMPONENT-$RUMBLE_DEPLOYMENT"
+  K8S_SECRET_RUMBLE_PUBLISHING_PLAYER_URL: "$PUBLISHING_PLAYER_URL"
+  K8S_SECRET_RUMBLE_TOKEN_VERIFICATION: "$RUMBLE_TOKEN_VERIFICATION"
+  K8S_SECRET_SLACK_ENDPOINT_POST_MESSAGE: "$SLACK_ENDPOINT_POST_MESSAGE"
+  K8S_SECRET_SLACK_MONITOR_CHANNEL: "$SLACK_MONITOR_CHANNEL"
+  K8S_SECRET_SLACK_MONITOR_FREQUENCY_SECONDS: "$SLACK_MONITOR_FREQUENCY_SECONDS"
+  K8S_SECRET_SLACK_REPORTS_CHANNEL: "$SLACK_REPORTS_CHANNEL"
+  K8S_SECRET_STICKY_CHECK_FREQUENCY_SECONDS: "$STICKY_CHECK_FREQUENCY_SECONDS"
+  K8S_SECRET_VERBOSE_LOGGING: "$VERBOSE_LOGGING"
+
+# from gitlab project ci variables - normally env specific
+  K8S_SECRET_SLACK_TOKEN_TOKEN: "$SLACK_TOKEN_TOKEN"
+  K8S_SECRET_RUMBLE_KEY: "$RUMBLE_KEY"
+  K8S_SECRET_MONGODB_URI: "$MONGODB_URI"
+  K8S_SECRET_GLOBAL_PLAYER_CAPACITY: "$GLOBAL_PLAYER_CAPACITY"
+
+
+  DOCKER_DRIVER: overlay2
+  DEPLOY_TYPE: "kubernetes" # "kubernetes", "beanstalk", "both"
+
+  ROLLOUT_RESOURCE_TYPE: deployment
+
+  DOCKER_TLS_CERTDIR: ""  # https://gitlab.com/gitlab-org/gitlab-runner/issues/4501
+
+stages:
+  - app_build
+  - build
+  - scan
+  - deploy  # dummy stage to follow the template guidelines
+  - dev
+  - staging
+  - production
+  - performance
+  - cleanup
+
+build_app:
+  stage: app_build
+  image: mcr.microsoft.com/dotnet/sdk:5.0
+  tags:
+    - kubernetes
+  script:
+    - dotnet nuget add source --username eric.sheris --password $NUGET_PAT --store-password-in-clear-text --name github "https://gitlab.cdrentertainment.com/api/v4/projects/14/packages/nuget/index.json"
+    - dotnet restore
+    - dotnet build --no-restore --configuration Release
+  artifacts:
+    paths:
+      - bin/Release/net5.0/*
+
+
+build_image:
+  stage: build
+  allow_failure: false
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
+    - /kaniko/executor --context $CI_PROJECT_DIR --dockerfile $CI_PROJECT_DIR/Dockerfile --destination $CI_REGISTRY_IMAGE/$CI_COMMIT_REF_SLUG:$CI_COMMIT_SHA
+  rules:
+    - if: '$BUILD_DISABLED'
+      when: never
+    - if: $DEPLOY_TYPE == "beanstalk"
+      when: never
+    - if: '$CI_COMMIT_TAG || $CI_COMMIT_BRANCH'
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+      when: always
+  needs:
+    - job: build_app
+      artifacts: true
+
+scan_repo:
+  stage: scan
+  allow_failure: false
+  cache:
+    key: token-service-scan
+    paths:
+      - ./.trivycache
+  image:
+    name: aquasec/trivy:0.20.0
+    entrypoint: [""]
+  script:
+    - mkdir -p ~/.trivycache
+    - wget https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+    - trivy --cache-dir ./.trivycache fs --security-checks vuln,config --format template --template "@html.tpl" --output $CI_COMMIT_REF_SLUG.$CI_COMMIT_SHA.html $PWD
+  artifacts:
+    paths:
+      - $CI_COMMIT_REF_SLUG.$CI_COMMIT_SHA.html
+    expire_in: 1 week
+
+include:
+  - '/.gitlab/deploy-k8s.yaml'
+  # - '/.gitlab/deploy-eb.yaml'

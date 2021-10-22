@@ -8,7 +8,7 @@ apiVersion: extensions/v1beta1
 {{- end }}
 kind: Ingress
 metadata:
-  name: {{ template "fullname" . }}
+  name: {{ template "fullname" . }}-secured
   labels:
 {{ include "sharedlabels" . | indent 4 }}
   annotations:

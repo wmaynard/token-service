@@ -8,7 +8,7 @@ using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	[ApiController, Route("secured"), Route("token")] // TODO: Remove the token route once Eric implements IP whitelisting for /secured/
+	[ApiController, Route("secured")]
 	public class SecuredController : TokenAuthController
 	{
 		public const string KEY_ADMIN_SECRET = "key";

@@ -4,11 +4,11 @@ An API for authenticating users
 
 # Introduction
 
-The Token Service is the entry point for all Platform services that require authentication.  Consumers of this service can request a JSON Web Token (JWT, or simply "token" in this document), which contains information embedded in it that can be used to uniquely identify a user.
+The Token Service is the entry point for all Platform services that require authentication.  Consumers of this service can request a JSON Web Token (JWT, or simply "token" in this document), which contains information embedded in it that can be used to uniquely identify a user.  Every token is signed and validated by Token Service with a secret key, which guarantees we know the token can be trusted.
 
 Administrator tokens can also be issued to internal consumers.  Previously, the Groovy services required passing a secret value around to authenticate admins.  With a custom token for each consumer, we can audit who's using services.
 
-Token payloads are not encrypted.  Any value contained within the token can be read by anyone, so personally identifiable information (PII) should never be embedded into them.  Every token is signed and validated by Token Service with a secret key, which guarantees we know the token can be trusted.
+Token payloads are not encrypted.  Any value contained within the token can be read by anyone, so personally identifiable information (PII) should never be embedded into them without first being encrypted.  To verify that your data is appropriately hidden, you can decode the information easily on the following website: https://jwt.io/
 
 It's important to note that when you generate a new token, previously-issued tokens are not necessarily invalid.  Tokens are invalid when:
 
@@ -70,7 +70,7 @@ All `/admin` endpoints require a valid admin token.
 ### Parameter breakdown for `/generateToken`:
 * `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
 * `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5 and for admin tokens is 3650 (ten years); larger values will be ignored.
-* `email`: The email address for an account.  This value is stored in Mongo along with the account, but is not embedded in the token.
+* `email`: The email address for an account.  This value is stored in Mongo along with the account.  It is encrypted and embedded in the token.
 * `key`: The Rumble Key.  If the name is confusing, it's supposed to be.
 * `origin`: Where the request is coming from (e.g. Tower Game Server, Publishing App, etc).
 * `screenname`: The screenname for an account.
@@ -99,7 +99,6 @@ Consequently, the standard way of accessing tokens via `PlatformController.Token
 
 ## Future Updates, Optimizations, and Nice-to-Haves
 
-* Add an option to encrypt specific values so we can safely pass email and other PII in the token.
 * A list of aliases for all accounts would be nice for auditing purposes.
 * Explore additional options for adding permissions (audiences) for tokens.
 

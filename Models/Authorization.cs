@@ -140,10 +140,13 @@ namespace TokenService.Models
 					ScreenName = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_SCREENNAME),
 					Discriminator = int.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_DISCRIMINATOR) ?? "0"),
 					IsAdmin = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString(),
+					Email = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EMAIL_ADDRESS),
 					Expiration = long.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION)),
 					Issuer = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER),
 					IpAddress = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS)
 				};
+				if (output.Email != null)
+					output.Email = Crypto.Decode(output.Email);
 
 				return output;
 			}
@@ -183,8 +186,8 @@ namespace TokenService.Models
 				claims.Add(new Claim(type: TokenInfo.DB_KEY_SCREENNAME, value: info.ScreenName));
 			if (info.Discriminator > 0)
 				claims.Add(new Claim(type: TokenInfo.DB_KEY_DISCRIMINATOR, value: info.Discriminator.ToString()));
-			// if (!string.IsNullOrWhiteSpace(info.Email))
-			// 	claims.Add(new Claim(type: UserInfo.DB_KEY_EMAIL, value: info.Email));
+			if (!string.IsNullOrWhiteSpace(info.Email))
+				claims.Add(new Claim(type: TokenInfo.DB_KEY_EMAIL_ADDRESS, value: Crypto.Encode(info.Email)));
 			if (!string.IsNullOrWhiteSpace(info.IpAddress))
 				claims.Add(new Claim(type: TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress));
 			if (isAdmin)

@@ -46,7 +46,7 @@ namespace TokenService.Models
 		
 		[BsonElement(DB_KEY_EMAIL)]
 		[JsonProperty(PropertyName = FRIENDLY_KEY_EMAIL, NullValueHandling = NullValueHandling.Ignore)]
-		public string Email { get; private set; }
+		public string Email { get; internal set; }
 		
 		[BsonElement(DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
 		[JsonProperty(FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS, DefaultValueHandling = DefaultValueHandling.Ignore)]

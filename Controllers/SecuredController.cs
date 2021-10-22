@@ -8,7 +8,7 @@ using TokenService.Services;
 
 namespace TokenService.Controllers
 {
-	[ApiController, Route("secured")]
+	[ApiController, Route("secured"), Route("token")] // TODO: Remove the token route once Eric implements IP whitelisting for /secured/
 	public class SecuredController : TokenAuthController
 	{
 		public const string KEY_ADMIN_SECRET = "key";
@@ -26,12 +26,13 @@ namespace TokenService.Controllers
 
 			string secret = Optional<string>(KEY_ADMIN_SECRET); // if this is present, check to see if it matches for admin access
 			bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == Authorization.ADMIN_SECRET;
-			
+
 			TokenInfo info = new TokenInfo()
 			{
 				AccountId = id,
 				ScreenName = screenName,
 				Discriminator = disc,
+				Email = email,
 				IsAdmin = isAdmin,
 				Issuer = Authorization.ISSUER,
 				IpAddress = IpAddress
@@ -51,6 +52,8 @@ namespace TokenService.Controllers
 			identity.LatestUserInfo = info;
 			identity.Authorizations.Add(auth);
 			identity.Authorizations = identity.Authorizations.TakeLast(Identity.MAX_AUTHORIZATIONS_KEPT).ToList();
+			if (email != null)
+				identity.Email = email;
 			_identityService.Update(identity);
 
 			return Ok(auth.ResponseObject, info.ResponseObject);

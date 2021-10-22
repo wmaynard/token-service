@@ -9,7 +9,7 @@
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.11" />
 	  <PackageReference Include="MongoDB.Driver" Version="2.13.0" />
 	  <PackageReference Include="MongoDB.Driver.Core" Version="2.13.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.0.32" />
+	  <PackageReference Include="platform-csharp-common" Version="1.0.33" />
 	</ItemGroup>
 
 	<ItemGroup>

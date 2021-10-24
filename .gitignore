@@ -3,3 +3,4 @@ bin
 obj
 nuget.config
 environment.json
+*.pem

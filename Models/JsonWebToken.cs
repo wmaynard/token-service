@@ -23,8 +23,8 @@ namespace TokenService.Models
 	public class JsonWebToken : PlatformDataModel
 	{
 		private const JwsAlgorithm ALGORITHM = JwsAlgorithm.RS256;
-		private static readonly string PUBLIC_KEY = PlatformEnvironment.FileText("publicKey.pem");
-		private static readonly string PRIVATE_KEY = PlatformEnvironment.FileText("privateKey.pem");
+		private static readonly string PUBLIC_KEY = PlatformEnvironment.FileText("public.pem");
+		private static readonly string PRIVATE_KEY = PlatformEnvironment.FileText("private.pem");
 		
 		[BsonIgnore]
 		[System.Text.Json.Serialization.JsonIgnore]
@@ -44,7 +44,7 @@ namespace TokenService.Models
 			using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
 			{
 				rsa.ImportParameters(rsaParams);
-				EncodedString = JWT.Encode(claims, rsa, JwsAlgorithm.RS256);
+				EncodedString = JWT.Encode(claims, rsa, ALGORITHM);
 			}
 		}
 

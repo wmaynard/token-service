@@ -138,7 +138,7 @@ namespace TokenService.Models
 				claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
 				claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
 
-				TokenInfo output = new TokenInfo()
+				TokenInfo output = new TokenInfo(token)
 				{
 					AccountId = (string) aid,
 					ScreenName = (string) sn,

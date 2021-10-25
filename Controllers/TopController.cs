@@ -27,7 +27,7 @@ namespace TokenService.Controllers
 			Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
 
 			if (authorization == null)
-				throw new AuthException(Token, "Too many new tokens have been generated for this account.");
+				throw new AuthException(Token, "Token is too old and has been replaced by newer tokens.");
 			if (!authorization.IsValid)
 				throw new AuthException(Token, "Token was invalidated.");
 

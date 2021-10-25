@@ -25,8 +25,8 @@ namespace TokenService.Models
 	public class JsonWebToken : PlatformDataModel
 	{
 		private const JwsAlgorithm ALGORITHM = JwsAlgorithm.RS256;
-		private static readonly string PUBLIC_KEY = PlatformEnvironment.FileText("public.pem");
-		private static readonly string PRIVATE_KEY = PlatformEnvironment.FileText("private.pem");
+		private static readonly string PUBLIC_KEY = PlatformEnvironment.Variable("PEM_PUBLIC");
+		private static readonly string PRIVATE_KEY = PlatformEnvironment.Variable("PEM_PRIVATE");
 		
 		[BsonIgnore]
 		[System.Text.Json.Serialization.JsonIgnore]

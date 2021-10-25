@@ -27,7 +27,6 @@ namespace TokenService.Models
 		internal const string ISSUER = "Rumble Token Service";
 		internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
 		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
-		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SIGNATURE");
 
 		private const string CLAIM_KEY_ISSUED_AT = "iat";
 		private const string CLAIM_KEY_AUDIENCE = "aud";

@@ -6,7 +6,7 @@ An API for authenticating users
 
 The Token Service is the entry point for all Platform services that require authentication.  Consumers of this service can request a JSON Web Token (JWT, or simply "token" in this document), which contains information embedded in it that can be used to uniquely identify a user.  Every token is signed and validated by Token Service with a secret key, which guarantees we know the token can be trusted.
 
-Administrator tokens can also be issued to internal consumers.  Previously, the Groovy services required passing a secret value around to authenticate admins.  With a custom token for each consumer, we can audit who's using services.
+Administrator tokens can also be issued to internal consumers.  Previously, the Groovy services required passing a secret value around to authenticate admins.  With a custom token for each consumer, we can audit who's using services in addition to relying on secrets less.
 
 Token payloads are not encrypted.  Any value contained within the token can be read by anyone, so personally identifiable information (PII) should never be embedded into them without first being encrypted.  To verify that your data is appropriately hidden, you can decode the information easily on the following website: https://jwt.io/
 
@@ -27,7 +27,7 @@ It's important to note that when you generate a new token, previously-issued tok
 | Invalidate | Marks every issued token as invalid.  When a consumer tries to access an API with an invalid token, they will receive an error.  They will need to generate a new token to continue using our services. |
 | Request | An HTTP request.  |
 | Rumble Key / Secret | A secret string value.  When this value matches what the service expects, the service knows it can trust the request's source.  This secret is unique to each environment. | 
-| Signature | A long string of random characters.  This is used to verify Token authorship. |
+| Signature | The ending component of a token, validated by RSA encryption.  This is used to verify Token authorship. |
 | Token / JWT | An encrypted token containing information about what resources a user can access and anything Platform uses to uniquely identify a user.  Tokens are sent in web requests as an HTTP header, in the format `"Bearer {token}"`. |
 | Trusted Client | A Rumble product or employee's device.  This typically means they have a whitelisted IP address, access to the rumble key, or both. |
 
@@ -87,9 +87,19 @@ The following **environment variables** must exist on the server where the servi
 	  "RUMBLE_COMPONENT": "token-service",
 	  "RUMBLE_DEPLOYMENT": "{deployment id}",
 	  "RUMBLE_KEY": "{secret}",
-	  "TOKEN_SECRET": "{Token Service Signature}",
 	  "GAME_GUKEY": "{game key}"
 	}
+
+## Public / Private Key Files (.pem)
+
+Token Service relies on the use of two key files to authenticate tokens via RSA.  These files are `public.pem` and `private.pem`, respectively.  These files should never be committed into a repository and must be kept closely guarded.  Their values are stored in GitLab's CI/CD `File` variables.  Each environment has its own key files.
+
+To generate new key files, run the following commands in Terminal:
+
+1. `openssl genrsa -in private.pem 512`
+2. `openssl rsa -in private.pem -pubout -out public.pem`
+
+When working locally, you can drop these into the base directory of your project.
 
 ## Maintenance
 

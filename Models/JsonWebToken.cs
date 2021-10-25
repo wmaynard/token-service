@@ -15,8 +15,10 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.OpenSsl;
 using Org.BouncyCastle.Security;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using TokenService.Exceptions;
 
 namespace TokenService.Models
 {
@@ -32,6 +34,9 @@ namespace TokenService.Models
 
 		public JsonWebToken(Dictionary<string, object> claims)
 		{
+			if (PRIVATE_KEY == null || PUBLIC_KEY == null)
+				throw new PlatformStartupException("Unable to complete request: RSA keys are missing.");
+			
 			RSAParameters rsaParams;
 			using (StringReader rdr = new StringReader(PRIVATE_KEY))
 			{
@@ -50,6 +55,9 @@ namespace TokenService.Models
 
 		internal static Dictionary<string, object> Decode(string token)
 		{
+			if (PRIVATE_KEY == null || PUBLIC_KEY == null)
+				throw new PlatformStartupException("Unable to complete request: RSA keys are missing.");
+			
 			RSAParameters rsaParams;
 
 			using (StringReader rdr = new StringReader(PUBLIC_KEY))

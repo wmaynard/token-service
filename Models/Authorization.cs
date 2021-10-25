@@ -1,13 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
+using System.IO;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using Jose;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson.Serialization.Attributes;
 using Newtonsoft.Json;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.OpenSsl;
+using Org.BouncyCastle.Security;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.CSharp.Common.Interop;
@@ -22,10 +29,8 @@ namespace TokenService.Models
 		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
 		private static readonly string SIGNATURE = PlatformEnvironment.Variable("TOKEN_SIGNATURE");
 
-		private const string CLAIM_KEY_ACCOUNT_ID = "aid";
-		private const string CLAIM_KEY_DISCRIMINATOR = "d";
-		private const string CLAIM_KEY_IS_ADMIN = "su";
-		private const string CLAIM_KEY_SCREENNAME = "sn";
+		private const string CLAIM_KEY_ISSUED_AT = "iat";
+		private const string CLAIM_KEY_AUDIENCE = "aud";
 		
 		internal const string DB_KEY_CREATED = "ts";
 		internal const string DB_KEY_EXPIRATION = "xp";
@@ -103,8 +108,16 @@ namespace TokenService.Models
 				});
 				Expiration = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
 			}
+
+			info.Expiration = Expiration;
+			info.IsAdmin = isAdmin;
 			
 			EncryptedToken = GenerateToken(info, IsAdmin);
+			TokenInfo test = Decode(EncryptedToken);
+
+			var claims = JsonWebToken.Decode(EncryptedToken);
+
+			var foo = "bar;";
 		}
 
 		/// <summary>
@@ -115,42 +128,47 @@ namespace TokenService.Models
 		internal static TokenInfo Decode(string token)
 		{
 			token = token.Replace("Bearer ", "");
+
 			try
 			{
-				TokenValidationParameters tokenParameters = new TokenValidationParameters()
-				{
-					ValidateActor = false,
-					ValidateAudience = true,
-					ValidAudience = AUDIENCE,
-					ValidateIssuer = true,
-					ValidIssuer = ISSUER,
-					ValidateIssuerSigningKey = true,
-					RequireSignedTokens = true,
-					IssuerSigningKeys = new[] {new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SIGNATURE))},
-					ValidateLifetime = true,
-					RequireExpirationTime = true,
-					ClockSkew = TimeSpan.Zero
-				};
+				Dictionary<string, object> claims = JsonWebToken.Decode(token);
 
-				ClaimsPrincipal claims = new JwtSecurityTokenHandler().ValidateToken(token, tokenParameters, out SecurityToken validToken);
+				claims.TryGetValue(TokenInfo.DB_KEY_ACCOUNT_ID, out object aid);
+				claims.TryGetValue(TokenInfo.DB_KEY_SCREENNAME, out object sn);
+				claims.TryGetValue(TokenInfo.DB_KEY_DISCRIMINATOR, out object disc);
+				claims.TryGetValue(TokenInfo.DB_KEY_IS_ADMIN, out object admin);
+				claims.TryGetValue(TokenInfo.DB_KEY_EMAIL_ADDRESS, out object email);
+				claims.TryGetValue(TokenInfo.DB_KEY_EXPIRATION, out object expiration);
+				claims.TryGetValue(TokenInfo.DB_KEY_ISSUER, out object issuer);
+				claims.TryGetValue(TokenInfo.DB_KEY_IP_ADDRESS, out object ip);
+				claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
+				claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
 
-				TokenInfo output = new TokenInfo(token)
+				TokenInfo output = new TokenInfo()
 				{
-					AccountId = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ACCOUNT_ID),
-					ScreenName = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_SCREENNAME),
-					Discriminator = int.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_DISCRIMINATOR) ?? "0"),
-					IsAdmin = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString(),
-					Email = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EMAIL_ADDRESS),
-					Expiration = long.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION)),
-					Issuer = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER),
-					IpAddress = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS)
+					AccountId = (string) aid,
+					ScreenName = (string) sn,
+					Discriminator = Convert.ToInt32(disc ?? -1),
+					IsAdmin = (bool) (admin ?? false),
+					Email = (string) email,
+					Expiration = Convert.ToInt64(expiration),
+					Issuer = (string) issuer,
+					IpAddress = (string) ip
 				};
 				if (output.Email != null)
 					output.Email = Crypto.Decode(output.Email);
 
+				if (!(audiences as object[]).Contains(AUDIENCE))
+					throw new AuthException(output, "Audience mismatch.");
+				if (output.Expiration <= UnixTime)
+					throw new AuthException(output, "Token is expired.");
 				return output;
 			}
-			catch (SecurityTokenInvalidSignatureException e)
+			catch (AuthException)
+			{
+				throw;
+			}
+			catch (IntegrityException e)
 			{
 				Log.Critical(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
 				{
@@ -159,59 +177,217 @@ namespace TokenService.Models
 				Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
 				throw new AuthException(null, "Signature mismatch");
 			}
-			catch (SecurityTokenInvalidAudienceException e)
+			catch (Exception e)
 			{
-				Log.Error(Owner.Default, "Token audience mismatch.", data: new
+				Log.Error(Owner.Default, "Unable to decode token.", data: new
 				{
-					Actual = Obscure(e.InvalidAudience),
-					Expected = Obscure(AUDIENCE)
-				});
-				throw new AuthException(null, "Audience mismatch.");
+					EncodedToken = token
+				}, exception: e);
+				throw;
 			}
-
+			
+			
+			// try
+			// {
+			// 	TokenValidationParameters tokenParameters = new TokenValidationParameters()
+			// 	{
+			// 		ValidateActor = false,
+			// 		ValidateAudience = true,
+			// 		ValidAudience = AUDIENCE,
+			// 		ValidateIssuer = true,
+			// 		ValidIssuer = ISSUER,
+			// 		ValidateIssuerSigningKey = true,
+			// 		RequireSignedTokens = true,
+			// 		IssuerSigningKeys = new[] {new SymmetricSecurityKey(Encoding.UTF8.GetBytes(SIGNATURE))},
+			// 		ValidateLifetime = true,
+			// 		RequireExpirationTime = true,
+			// 		ClockSkew = TimeSpan.Zero
+			// 	};
+			//
+			// 	ClaimsPrincipal claims = new JwtSecurityTokenHandler().ValidateToken(token, tokenParameters, out SecurityToken validToken);
+			//
+			// 	TokenInfo output = new TokenInfo(token)
+			// 	{
+			// 		AccountId = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ACCOUNT_ID),
+			// 		ScreenName = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_SCREENNAME),
+			// 		Discriminator = int.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_DISCRIMINATOR) ?? "0"),
+			// 		IsAdmin = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IS_ADMIN) == true.ToString(),
+			// 		Email = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EMAIL_ADDRESS),
+			// 		Expiration = long.Parse(claims.FindFirstValue(claimType: TokenInfo.DB_KEY_EXPIRATION)),
+			// 		Issuer = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_ISSUER),
+			// 		IpAddress = claims.FindFirstValue(claimType: TokenInfo.DB_KEY_IP_ADDRESS)
+			// 	};
+			// 	if (output.Email != null)
+			// 		output.Email = Crypto.Decode(output.Email);
+			//
+			// 	return output;
+			// }
+			// catch (SecurityTokenInvalidSignatureException e)
+			// {
+			// 	Log.Critical(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
+			// 	{
+			// 		EncryptedToken = token
+			// 	}, exception: e);
+			// 	Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
+			// 	throw new AuthException(null, "Signature mismatch");
+			// }
+			// catch (SecurityTokenInvalidAudienceException e)
+			// {
+			// 	Log.Error(Owner.Default, "Token audience mismatch.", data: new
+			// 	{
+			// 		Actual = Obscure(e.InvalidAudience),
+			// 		Expected = Obscure(AUDIENCE)
+			// 	});
+			// 	throw new AuthException(null, "Audience mismatch.");
+			// }
 		}
 
 		private string GenerateToken(TokenInfo info, bool isAdmin = false)
 		{
-			string secret = SIGNATURE ?? throw new AuthException(info, "Unable to sign token; no signature available.");
+			Dictionary<string, object> claims = new Dictionary<string, object>();
 			
-			SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
-			SigningCredentials credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+			claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
+			claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
+			claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
+			claims.Add(CLAIM_KEY_ISSUED_AT, UnixTime);
+			claims.Add(CLAIM_KEY_AUDIENCE, new string[]{ AUDIENCE });
 
-			List<Claim> claims = new List<Claim>()
-			{
-				new Claim(type: TokenInfo.DB_KEY_ACCOUNT_ID, value: info.AccountId)
-			};
 			if (info.ScreenName != null)
-				claims.Add(new Claim(type: TokenInfo.DB_KEY_SCREENNAME, value: info.ScreenName));
+				claims.Add(TokenInfo.DB_KEY_SCREENNAME, info.ScreenName);
 			if (info.Discriminator > 0)
-				claims.Add(new Claim(type: TokenInfo.DB_KEY_DISCRIMINATOR, value: info.Discriminator.ToString()));
+				claims.Add(TokenInfo.DB_KEY_DISCRIMINATOR, info.Discriminator);
 			if (!string.IsNullOrWhiteSpace(info.Email))
-				claims.Add(new Claim(type: TokenInfo.DB_KEY_EMAIL_ADDRESS, value: Crypto.Encode(info.Email)));
+				claims.Add(TokenInfo.DB_KEY_EMAIL_ADDRESS, Crypto.Encode(info.Email));
 			if (!string.IsNullOrWhiteSpace(info.IpAddress))
-				claims.Add(new Claim(type: TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress));
-			if (isAdmin)
-				claims.Add(new Claim(type: CLAIM_KEY_IS_ADMIN, value: true.ToString()));
+				claims.Add(TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress);
+			if (info.IsAdmin)
+				claims.Add(TokenInfo.DB_KEY_IS_ADMIN, true);
 
-			SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
+			return new JsonWebToken(claims).EncodedString;
+			//
+			// string secret = SIGNATURE ?? throw new AuthException(info, "Unable to sign token; no signature available.");
+			//
+			// SymmetricSecurityKey key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret));
+			// SigningCredentials credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha512);
+			//
+			// List<Claim> claims = new List<Claim>()
+			// {
+			// 	new Claim(type: TokenInfo.DB_KEY_ACCOUNT_ID, value: info.AccountId)
+			// };
+			// if (info.ScreenName != null)
+			// 	claims.Add(new Claim(type: TokenInfo.DB_KEY_SCREENNAME, value: info.ScreenName));
+			// if (info.Discriminator > 0)
+			// 	claims.Add(new Claim(type: TokenInfo.DB_KEY_DISCRIMINATOR, value: info.Discriminator.ToString()));
+			// if (!string.IsNullOrWhiteSpace(info.Email))
+			// 	claims.Add(new Claim(type: TokenInfo.DB_KEY_EMAIL_ADDRESS, value: Crypto.Encode(info.Email)));
+			// if (!string.IsNullOrWhiteSpace(info.IpAddress))
+			// 	claims.Add(new Claim(type: TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress));
+			// // if (isAdmin)
+			// // 	claims.Add(new Claim(type: CLAIM_KEY_IS_ADMIN, value: true.ToString()));
+			//
+			// SecurityTokenDescriptor descriptor = new SecurityTokenDescriptor()
+			// {
+			// 	Audience = AUDIENCE,
+			// 	Issuer = ISSUER,
+			// 	IssuedAt = DateTime.UtcNow,
+			// 	NotBefore = DateTime.UtcNow,
+			// 	Expires = DateTime.UnixEpoch.AddSeconds(Expiration),
+			// 	Subject = new ClaimsIdentity(claims),
+			// 	SigningCredentials = credentials
+			// };
+			//
+			// Graphite.Track("tokens-generated", 1);
+			// if (isAdmin)
+			// {
+			// 	Log.Info(Owner.Default, "Admin token generated.");
+			// 	Graphite.Track("admin-tokens-generated", 1);
+			// }
+			//
+			// Test();
+			//
+			// return new JwtSecurityTokenHandler().CreateEncodedJwt(descriptor);
+		}
+		
+		public static void Test()
+		{
+			JsonWebToken spoof = new JsonWebToken(new Dictionary<string, object>()
 			{
-				Audience = AUDIENCE,
-				Issuer = ISSUER,
-				IssuedAt = DateTime.UtcNow,
-				NotBefore = DateTime.UtcNow,
-				Expires = DateTime.UnixEpoch.AddSeconds(Expiration),
-				Subject = new ClaimsIdentity(claims),
-				SigningCredentials = credentials
-			};
-
-			Graphite.Track("tokens-generated", 1);
-			if (isAdmin)
-			{
-				Log.Info(Owner.Default, "Admin token generated.");
-				Graphite.Track("admin-tokens-generated", 1);
-			}
+				{"sub", "6111c6c3fbd19670e1f1b87b"},
+				{"aud", "57901c6df82a45708018ba73b8d16004"},
+				{"iss", "Rumble Player Service"},
+				{"disc", 1439},
+				{"sn", "DoktorNik"},
+				{"exp", 1635293942},
+				{"iat", 1634948342},
+				{"key", "jwt"}
+			});
 			
-			return new JwtSecurityTokenHandler().CreateEncodedJwt(descriptor);
+			JsonWebToken token = new JsonWebToken(new Dictionary<string, object>()
+			{
+				{"claim1", "value100"},
+				{"claim2", "value200"},
+				{"claim3", "value300"}
+			});
+			// JsonWebToken token = new JsonWebToken(new Claim("claim1", "value1"), new Claim("claim2", "value2"), new Claim("admin", "true"));
+
+			Dictionary<string, object> payload = JsonWebToken.Decode(spoof.EncodedString);
+
+			var payload2 = payload;
+
+			// string publicKey = File.ReadAllText("publicKey.pem");
+			// string privateKey = File.ReadAllText("privateKey.pem");
+			//
+			// List<Claim> claims = new List<Claim>();
+			// claims.Add(new Claim("claim1", "value1"));
+			// claims.Add(new Claim("claim2", "value2"));
+			// claims.Add(new Claim("claim3", "value3"));
+			//
+			// string token = CreateToken(claims, privateKey);
+			// string payload = DecodeToken(token, publicKey);
+		}
+		
+		public static string DecodeToken(string token, string publicRsaKey)
+		{
+			RSAParameters rsaParams;
+
+			using (StringReader tr = new StringReader(publicRsaKey))
+			{
+				PemReader pemReader = new PemReader(tr);
+				RsaKeyParameters publicKeyParams = (RsaKeyParameters) pemReader.ReadObject();
+				if (publicKeyParams == null)
+					throw new Exception("Could not read RSA public key");
+				rsaParams = DotNetUtilities.ToRSAParameters(publicKeyParams);
+			}
+			using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+			{
+				rsa.ImportParameters(rsaParams);
+				// This will throw if the signature is invalid
+				return JWT.Decode(token, rsa, JwsAlgorithm.RS256);  
+			}
+		}
+
+		private static readonly string PUBLIC_KEY = PlatformEnvironment.FileText("publicKey.pem");
+		private static readonly string PRIVATE_KEY = PlatformEnvironment.FileText("privateKey.pem");
+		public static string CreateToken(IEnumerable<Claim> claims)
+		{
+			RSAParameters rsaParams;
+			using (StringReader rdr = new StringReader(PRIVATE_KEY))
+			{
+				PemReader pemReader = new PemReader(rdr);
+				AsymmetricCipherKeyPair keyPair = (AsymmetricCipherKeyPair)pemReader.ReadObject();
+				if (keyPair == null)
+					throw new Exception("Could not read RSA private key");
+				RsaPrivateCrtKeyParameters privateRsaParams = (RsaPrivateCrtKeyParameters)keyPair.Private;
+				rsaParams = DotNetUtilities.ToRSAParameters(privateRsaParams);
+			}
+			using (RSACryptoServiceProvider rsa = new RSACryptoServiceProvider())
+			{
+				rsa.ImportParameters(rsaParams);
+				Dictionary<string, object> payload = claims.ToDictionary(
+					keySelector: claim => claim.Type, 
+					elementSelector: claim => (object)claim.Value);
+				return JWT.Encode(payload, rsa, JwsAlgorithm.RS256);
+			}
 		}
 
 		/// <summary>

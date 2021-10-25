@@ -84,7 +84,7 @@ ingress:
       nginx.ingress.kubernetes.io/client-body-buffer-size: 1m
     paths:
       - "/secured/token"
-    whitelist: "172.16.0.0/16,10.71.0.0/16,10.72.0.0/16,24.113.139.253,73.162.30.116,162.192.0.238,54.160.39.69"
+    whitelist: "172.16.0.0/16,10.71.0.0/16,10.72.0.0/16,24.113.139.253,73.162.30.116,162.192.0.238"
 prometheus:
   metrics: true
 livenessProbe:

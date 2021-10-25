@@ -49,7 +49,7 @@ Every secured endpoint requires an `Authorization` header with a value of `Beare
 
 | Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
 | ---:    | :---      | :---        | :---                | :---                |
-| GET | `/health`| Health check, required by the load balancer. | | |
+| GET | `/token/health`| Health check, required by the load balancer. | | |
 
 ## Admin
 
@@ -57,21 +57,28 @@ All `/admin` endpoints require a valid admin token.
 
 | Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
 | ---:    | :---      | :---        | :---                | :---                |
-| PATCH | `/admin/ban` | Bans an account from all services. | `aid` | |
-| PATCH | `/admin/invalidate` | Invalidates all existing tokens for an account. | `aid` | |
-| PATCH | `/admin/unban` | Removes a ban from an account. | `aid` | |
+| PATCH | `/token/admin/ban` | Bans an account from all services. | `aid` | |
+| PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid` | |
+| PATCH | `/token/admin/unban` | Removes a ban from an account. | `aid` | |
 
-## IdentityController
+## TopController
 | Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
 | ---:    | :---      | :---        | :---                | :---                |
 | GET | `/token/validate/` | Checks to see if a token is valid.  Returns `tokenInfo` if valid, otherwise an error. | | |
-| POST | `/secured/generateToken` | Creates a token with account information embedded in it. | `aid`, `origin` | `days`, `discriminator`, `email`, `key`, `screenname`
+
+## SecuredController
+
+All `/secured` endpoints are protected by whitelisted IP addresses when deployed.  This whitelist can be found in the `/.gitlab/dev.values.yaml` file, under the application whitelist section.
+
+| Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
+| ---:    | :---      | :---        | :---                | :---                |
+| POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`, `origin` | `days`, `discriminator`, `email`, `key`, `screenname`
 
 ### Parameter breakdown for `/generateToken`:
 * `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
 * `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5 and for admin tokens is 3650 (ten years); larger values will be ignored.
-* `email`: The email address for an account.  This value is stored in Mongo along with the account.  It is encrypted and embedded in the token.
-* `key`: The Rumble Key.  If the name is confusing, it's supposed to be.
+* `email`: The email address for an account.  This value is stored in Mongo along with the account.  It is embedded in the token as an encrypted value.
+* `key`: The Rumble Key.  Any token created with this will be an Administrator.
 * `origin`: Where the request is coming from (e.g. Tower Game Server, Publishing App, etc).
 * `screenname`: The screenname for an account.
 
@@ -116,7 +123,7 @@ Consequently, the standard way of accessing tokens via `PlatformController.Token
 
 ### _I'm unable to generate a token anywhere other than my local machine._
 
-It's important that our token generation remains as secure as possible.  While it would be a huge problem if the `Rumble Key` was ever leaked, we have an extra layer of security for tokens: you must be whitelisted in order to generate tokens.  If you suspect you aren't on this list and need to be able to generate tokens, contact DevOps.
+It's important that our token generation remains as secure as possible.  While it would be a huge problem if the `Rumble Key` was ever leaked, we have an extra layer of security for tokens: you must be whitelisted in order to generate tokens.  Refer to the **SecuredController** section for more information.
 
 ### _How do I find the `Rumble Key`?_
 

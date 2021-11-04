@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
 
@@ -27,6 +28,10 @@ namespace TokenService.Controllers
 			string secret = Optional<string>(KEY_ADMIN_SECRET); // if this is present, check to see if it matches for admin access
 			bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == Authorization.ADMIN_SECRET;
 
+			Identity identity = _identityService.Find(id);
+			if (identity?.Banned ?? false)
+				throw new AuthException(null, "Account was banned."); // TODO: New exception type
+			
 			TokenInfo info = new TokenInfo()
 			{
 				AccountId = id,
@@ -38,7 +43,6 @@ namespace TokenService.Controllers
 				IpAddress = IpAddress
 			};
 
-			Identity identity = _identityService.Find(id);
 			if (identity == null)
 			{
 				Log.Info(Owner.Default, "Token record created for account.", data: new { AccountId = id});

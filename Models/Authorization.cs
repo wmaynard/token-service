@@ -121,8 +121,9 @@ namespace TokenService.Models
 		/// <returns>Information that was embedded in the token.</returns>
 		internal static TokenInfo Decode(string token)
 		{
-			token = token.Replace("Bearer ", "");
-
+			token = token?.Replace("Bearer ", "");
+			if (string.IsNullOrWhiteSpace(token))
+				throw new AuthException(null, "No token provided.");
 			try
 			{
 				Dictionary<string, object> claims = JsonWebToken.Decode(token);
@@ -177,7 +178,7 @@ namespace TokenService.Models
 				{
 					EncodedToken = token
 				}, exception: e);
-				throw;
+				throw new AuthException(null, "Unable to decode token.");
 			}
 		}
 

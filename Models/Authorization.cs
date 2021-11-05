@@ -6,15 +6,11 @@ using System.Linq;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json.Serialization;
 using Jose;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json;
-using Org.BouncyCastle.Crypto;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.OpenSsl;
-using Org.BouncyCastle.Security;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using Rumble.Platform.CSharp.Common.Interop;
@@ -48,30 +44,31 @@ namespace TokenService.Models
 		public const string FRIENDLY_KEY_TOKEN = "token";
 		
 		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
-		[JsonProperty(FRIENDLY_KEY_CREATED, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long Created { get; internal set; }
 		
 		[BsonElement(DB_KEY_TOKEN)]
-		[JsonProperty(FRIENDLY_KEY_TOKEN, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKEN)]
 		public string EncryptedToken { get; internal set; }
+		
 		[BsonElement(DB_KEY_EXPIRATION)]
-		[JsonProperty(FRIENDLY_KEY_EXPIRATION, DefaultValueHandling = DefaultValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EXPIRATION)]
 		public long Expiration { get; internal set; }
 		
 		[BsonElement(DB_KEY_IS_ADMIN), BsonIgnoreIfDefault]
-		[JsonProperty(FRIENDLY_KEY_IS_ADMIN, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_ADMIN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public bool IsAdmin { get; private set; }
 		
 		[BsonElement(DB_KEY_IS_VALID)]
-		[JsonProperty(FRIENDLY_KEY_IS_VALID, DefaultValueHandling = DefaultValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_VALID)]
 		public bool IsValid { get; internal set; }
 		
 		[BsonElement(DB_KEY_ISSUER)]
-		[JsonProperty(FRIENDLY_KEY_ISSUER, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ISSUER)]
 		public string Issuer { get; private set; }
 		
 		[BsonElement(DB_KEY_ORIGIN)]
-		[JsonProperty(FRIENDLY_KEY_ORIGIN, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ORIGIN)]
 		public string Origin { get; internal set; }
 		
 		[BsonIgnore]

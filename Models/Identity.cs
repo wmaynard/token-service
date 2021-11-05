@@ -1,7 +1,6 @@
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Rumble.Platform.Common.Web;
 
 namespace TokenService.Models
@@ -29,39 +28,39 @@ namespace TokenService.Models
 		public const string FRIENDLY_KEY_TOKENS = "tokens";
 
 		[BsonElement(TokenInfo.DB_KEY_ACCOUNT_ID)]
-		[JsonProperty(PropertyName = TokenInfo.FRIENDLY_KEY_ACCOUNT_ID, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID)]
 		public string AccountId { get; private set; }
 		
 		[BsonElement(DB_KEY_TOKENS)]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_TOKENS, NullValueHandling = NullValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKENS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public List<Authorization> Authorizations { get; internal set; }
 		
 		[BsonElement(DB_KEY_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_AUTH_ATTEMPTS, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long AuthAttempts { get; internal set; }
 		
 		[BsonElement(DB_KEY_BANNED)]
-		[JsonProperty(FRIENDLY_KEY_BANNED, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANNED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public bool Banned { get; internal set; }
 		
 		[BsonElement(DB_KEY_EMAIL)]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_EMAIL, NullValueHandling = NullValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 		public string Email { get; internal set; }
 		
 		[BsonElement(DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
-		[JsonProperty(FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long FailedAdminAuthAttempts { get; internal set; }
 		
 		[BsonElement(DB_KEY_FAILED_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS, DefaultValueHandling = DefaultValueHandling.Ignore)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long FailedAuthAttempts { get; internal set; }
 		
 		[BsonElement(DB_KEY_INITIAL_USER_INFO)]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_INITIAL_USER_INFO, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INITIAL_USER_INFO)]
 		public TokenInfo InitialUserInfo { get; private set; }
 		
 		[BsonElement(DB_KEY_LATEST_USER_INFO)]
-		[JsonProperty(PropertyName = FRIENDLY_KEY_LATEST_USER_INFO, NullValueHandling = NullValueHandling.Include)]
+		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_LATEST_USER_INFO)]
 		public TokenInfo LatestUserInfo { get; internal set; }
 		
 		public Identity(string accountId, TokenInfo initialInfo, string email = null)

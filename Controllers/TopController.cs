@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -35,6 +36,8 @@ namespace TokenService.Controllers
 				? "admin-tokens-validated"
 				: "tokens-validated";
 			Graphite.Track(name, 1);
+
+			throw new Exception();
 			
 			return Ok(Token.ResponseObject);
 		}

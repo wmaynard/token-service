@@ -73,7 +73,7 @@ namespace TokenService.Models
 				// This will throw if the signature is invalid
 				string payload = JWT.Decode(token, provider, ALGORITHM);
 
-				return JsonDocument.Parse(payload)
+				return JsonDocument.Parse(payload, JsonHelper.DocumentOptions)
 					.RootElement
 					.EnumerateObject()
 					.ToDictionary(

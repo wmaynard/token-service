@@ -162,7 +162,8 @@ namespace TokenService.Models
 			}
 			catch (IntegrityException e)
 			{
-				Log.Critical(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
+				// TODO: Raise severity to Critical once player-service-v2 goes live
+				Log.Warn(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
 				{
 					EncryptedToken = token
 				}, exception: e);

@@ -36,8 +36,6 @@ namespace TokenService.Controllers
 				? "admin-tokens-validated"
 				: "tokens-validated";
 			Graphite.Track(name, 1);
-
-			throw new Exception();
 			
 			return Ok(Token.ResponseObject);
 		}

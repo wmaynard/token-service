@@ -84,7 +84,7 @@ ingress:
       nginx.ingress.kubernetes.io/client-body-buffer-size: 1m
     paths:
       - "/secured/token"
-    whitelist: "172.16.0.0/16,10.71.0.0/16,10.72.0.0/16,24.113.139.253,73.162.30.116,162.192.0.238,54.166.201.97,3.231.144.83,54.209.241.190"
+    whitelist: "172.16.0.0/16,10.71.0.0/16,10.72.0.0/16,24.113.139.253,73.162.30.116,162.192.0.238,54.166.201.97,3.231.144.83,54.209.241.190,54.90.43.106,54.85.175.178,52.55.51.81,54.227.238.254" # All IPs after 54.166 are ec2 instances or nat gateways for eng and prod
 prometheus:
   metrics: false
 livenessProbe:

@@ -24,6 +24,8 @@ namespace TokenService.Controllers
 			string origin = Require<string>(Authorization.FRIENDLY_KEY_ORIGIN);
 			string email = Optional<string>(Identity.FRIENDLY_KEY_EMAIL);
 			long lifetime = Optional<long?>("days") ?? 5;
+			string ipAddress = Optional<string>("ipAddress");
+			string countryCode = Optional<string>("countryCode");
 
 			string secret = Optional<string>(KEY_ADMIN_SECRET); // if this is present, check to see if it matches for admin access
 			bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == Authorization.ADMIN_SECRET;
@@ -40,7 +42,8 @@ namespace TokenService.Controllers
 				Email = email,
 				IsAdmin = isAdmin,
 				Issuer = Authorization.ISSUER,
-				IpAddress = IpAddress
+				IpAddress = ipAddress,
+				CountryCode = countryCode
 			};
 
 			if (identity == null)

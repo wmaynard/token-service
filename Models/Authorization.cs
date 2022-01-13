@@ -133,6 +133,7 @@ namespace TokenService.Models
 				claims.TryGetValue(TokenInfo.DB_KEY_EXPIRATION, out object expiration);
 				claims.TryGetValue(TokenInfo.DB_KEY_ISSUER, out object issuer);
 				claims.TryGetValue(TokenInfo.DB_KEY_IP_ADDRESS, out object ip);
+				claims.TryGetValue(TokenInfo.DB_KEY_COUNTRY_CODE, out object countryCode);
 				claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
 				claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
 
@@ -145,7 +146,8 @@ namespace TokenService.Models
 					Email = (string) email,
 					Expiration = Convert.ToInt64(expiration),
 					Issuer = (string) issuer,
-					IpAddress = (string) ip
+					IpAddress = (string) ip,
+					CountryCode = (string) countryCode
 				};
 				if (output.Email != null)
 					output.Email = Crypto.Decode(output.Email);
@@ -198,6 +200,8 @@ namespace TokenService.Models
 				claims.Add(TokenInfo.DB_KEY_EMAIL_ADDRESS, Crypto.Encode(info.Email));
 			if (!string.IsNullOrWhiteSpace(info.IpAddress))
 				claims.Add(TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress);
+			if (!string.IsNullOrWhiteSpace(info.CountryCode))
+				claims.Add(TokenInfo.DB_KEY_COUNTRY_CODE, info.CountryCode);
 			if (info.IsAdmin)
 				claims.Add(TokenInfo.DB_KEY_IS_ADMIN, true);
 
@@ -212,8 +216,5 @@ namespace TokenService.Models
 		/// <param name="length">The number of characters at BOTH beginning and end to display.</param>
 		/// <returns>A string in the format "foo...bar", where the ellipsis replaces everything in the middle of the string.</returns>
 		private static string Obscure(string sensitive, int length = 4) => sensitive.Length > length * 2 ? $"{sensitive[..length]}...{sensitive[^length..]}" : "too_short";
-		
-		// Other fields that player service was tracking:
-		// remoteAddress, geoipAddress, country, serverTime, accountId, requestId?, token
 	}
 }

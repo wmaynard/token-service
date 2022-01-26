@@ -1,6 +1,6 @@
 using Rumble.Platform.Common.Exceptions;
+using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Web;
-using Rumble.Platform.CSharp.Common.Interop;
 
 namespace TokenService.Exceptions
 {

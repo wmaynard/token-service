@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Jose;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -40,10 +41,12 @@ namespace TokenService.Models
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 		public long Created { get; internal set; }
 		
+		[SimpleIndex(DB_KEY_TOKEN, FRIENDLY_KEY_TOKEN)]
 		[BsonElement(DB_KEY_TOKEN)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKEN)]
 		public string EncryptedToken { get; internal set; }
 		
+		[SimpleIndex(DB_KEY_EXPIRATION, FRIENDLY_KEY_EXPIRATION)]
 		[BsonElement(DB_KEY_EXPIRATION)]
 		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EXPIRATION)]
 		public long Expiration { get; internal set; }

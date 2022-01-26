@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
+using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Web;
 
 namespace TokenService.Models
@@ -27,6 +28,7 @@ namespace TokenService.Models
 		public const string FRIENDLY_KEY_LATEST_USER_INFO = "userInfo";
 		public const string FRIENDLY_KEY_TOKENS = "tokens";
 
+		[SimpleIndex(TokenInfo.DB_KEY_ACCOUNT_ID, TokenInfo.FRIENDLY_KEY_ACCOUNT_ID)]
 		[BsonElement(TokenInfo.DB_KEY_ACCOUNT_ID)]
 		[JsonInclude, JsonPropertyName(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID)]
 		public string AccountId { get; private set; }

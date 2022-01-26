@@ -18,18 +18,18 @@ It's important to note that when you generate a new token, previously-issued tok
 
 # Glossary
 
-| Term | Definition |
-| ---: | :--- |
-| AccountID (aid) | With regards to player accounts, this refers to their MongoDB-generated key.  For administrators, this is a user-defined unique identifier. |
-| Authorization | An HTTP header in web requests in the form of `Bearer {token}`, where "token" is a generated JWT from Token Service. |
-| Ban | Completely bans the **AccountId** in question.  Regardless of the authorization granted to them, a banned account will fail all validation. |
-| Game Key | Each game has a unique key that's used to identify it.  When a token is generated, it is linked to a specific resource by a key like this. |
-| Invalidate | Marks every issued token as invalid.  When a consumer tries to access an API with an invalid token, they will receive an error.  They will need to generate a new token to continue using our services. |
-| Request | An HTTP request.  |
-| Rumble Key / Secret | A secret string value.  When this value matches what the service expects, the service knows it can trust the request's source.  This secret is unique to each environment. | 
-| Signature | The ending component of a token, validated by RSA encryption.  This is used to verify Token authorship. |
-| Token / JWT | An encrypted token containing information about what resources a user can access and anything Platform uses to uniquely identify a user.  Tokens are sent in web requests as an HTTP header, in the format `"Bearer {token}"`. |
-| Trusted Client | A Rumble product or employee's device.  This typically means they have a whitelisted IP address, access to the rumble key, or both. |
+|                Term | Definition                                                                                                                                                                                                                     |
+|--------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+|     AccountID (aid) | With regards to player accounts, this refers to their MongoDB-generated key.  For administrators, this is a user-defined unique identifier.                                                                                    |
+|       Authorization | An HTTP header in web requests in the form of `Bearer {token}`, where "token" is a generated JWT from Token Service.                                                                                                           |
+|                 Ban | Completely bans the **AccountId** in question.  Regardless of the authorization granted to them, a banned account will fail all validation.                                                                                    |
+|            Game Key | Each game has a unique key that's used to identify it.  When a token is generated, it is linked to a specific resource by a key like this.                                                                                     |
+|          Invalidate | Marks every issued token as invalid.  When a consumer tries to access an API with an invalid token, they will receive an error.  They will need to generate a new token to continue using our services.                        |
+|             Request | An HTTP request.                                                                                                                                                                                                               |
+| Rumble Key / Secret | A secret string value.  When this value matches what the service expects, the service knows it can trust the request's source.  This secret is unique to each environment.                                                     | 
+|           Signature | The ending component of a token, validated by RSA encryption.  This is used to verify Token authorship.                                                                                                                        |
+|         Token / JWT | An encrypted token containing information about what resources a user can access and anything Platform uses to uniquely identify a user.  Tokens are sent in web requests as an HTTP header, in the format `"Bearer {token}"`. |
+|      Trusted Client | A Rumble product or employee's device.  This typically means they have a whitelisted IP address, access to the rumble key, or both.                                                                                            |
 
 # Consuming The Service
 
@@ -47,32 +47,33 @@ Every secured endpoint requires an `Authorization` header with a value of `Beare
 
 ## Top Level
 
-| Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
-| ---:    | :---      | :---        | :---                | :---                |
-| GET | `/token/health`| Health check, required by the load balancer. | | |
+| Method | Endpoint        | Description                                  | Required | Optional | Internal Consumers | External Consumers |
+|-------:|:----------------|:---------------------------------------------|:---------|:---------|:-------------------|:-------------------|
+|    GET | `/token/health` | Health check, required by the load balancer. |          |          | Load balancer      ||
 
 ## Admin
 
 All `/admin` endpoints require a valid admin token.
 
-| Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
-| ---:    | :---      | :---        | :---                | :---                |
-| PATCH | `/token/admin/ban` | Bans an account from all services. | `aid` | |
-| PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid` | |
-| PATCH | `/token/admin/unban` | Removes a ban from an account. | `aid` | |
+| Method | Endpoint                  | Description                                     | Required | Optional | Internal Consumers | External Consumers |
+|-------:|:--------------------------|:------------------------------------------------|:---------|:---------|:-------------------|:-------------------|
+|  PATCH | `/token/admin/ban`        | Bans an account from all services.              | `aid`    |          | Portal             |                    |
+|  PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid`    |          | Portal             |                    | 
+|  PATCH | `/token/admin/unban`      | Removes a ban from an account.                  | `aid`    |          | Portal             |                    |
 
 ## TopController
-| Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
-| ---:    | :---      | :---        | :---                | :---                |
-| GET | `/token/validate/` | Checks to see if a token is valid.  Returns `tokenInfo` if valid, otherwise an error. | | |
+
+| Method | Endpoint           | Description                                                                           | Required | Optional | Internal Consumers         | External Consumers |
+|-------:|:-------------------|:--------------------------------------------------------------------------------------|:---------|:---------|:---------------------------|:-------------------|
+|    GET | `/token/validate/` | Checks to see if a token is valid.  Returns `tokenInfo` if valid, otherwise an error. |          |          | All Services <br /> Portal |                    |
 
 ## SecuredController
 
 All `/secured` endpoints are protected by whitelisted IP addresses when deployed.  This whitelist can be found in the `/.gitlab/dev.values.yaml` file, under the application whitelist section.
 
-| Method  | Endpoint  | Description | Required Parameters | Optional Parameters |
-| ---:    | :---      | :---        | :---                | :---                |
-| POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`, `origin` | `days`, `discriminator`, `email`, `key`, `screenname`
+| Method | Endpoint                  | Description                                              | Required            | Optional                                                              | Internal Consumers | External Consumers |
+|-------:|:--------------------------|:---------------------------------------------------------|:--------------------|:----------------------------------------------------------------------|:-------------------|:-------------------|
+|   POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`<br />`origin` | `days`<br />`discriminator`<br />`email`<br />`key`<br />`screenname` | player-service     |                    |
 
 ### Parameter breakdown for `/generateToken`:
 * `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
@@ -127,7 +128,7 @@ It's important that our token generation remains as secure as possible.  While i
 
 ### _How do I find the `Rumble Key`?_
 
-It's a bad idea to document exactly how to find it, so contact Platform instead.
+Contact someone in platform, or ask the Slack channel (#platform).
 
 ### _I'm trying to generate an admin token and am sending a `Rumble Key`, but my token says it isn't an administrator when I validate it._
 

@@ -9,7 +9,6 @@ dev:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -29,8 +28,7 @@ stage-a:
   script:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
-    - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
+    - auto-deploy ensure_namespac
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -51,7 +49,6 @@ stage-b:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
@@ -72,12 +69,55 @@ stage-c:
     - auto-deploy check_kube_domain
     - auto-deploy download_chart
     - auto-deploy ensure_namespace
-    - auto-deploy initialize_tiller
     - auto-deploy create_secret
     - auto-deploy deploy
   environment:
     name: stage-c
     url: https://stage-c.nonprod.tower.cdrentertainment.com/
+  rules:
+    - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
+      when: never
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+      when: manual
+
+production:
+  extends: .auto-deploy
+  stage: production
+  tags:
+    - production
+  script:
+    - auto-deploy check_kube_domain
+    - auto-deploy download_chart
+    - auto-deploy ensure_namespace
+    - auto-deploy create_secret
+    - auto-deploy deploy
+  environment:
+    name: production/platform
+    url: https://platform-a.prod.tower.rumblegames.com/
+  rules:
+    - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
+      when: never
+    - if: '$CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+      when: never
+    - if: $DEPLOY_TYPE == "kubernetes" || $DEPLOY_TYPE == "both"
+      when: manual
+
+production-b:
+  extends: .auto-deploy
+  stage: production
+  tags:
+    - production
+  script:
+    - auto-deploy check_kube_domain
+    - auto-deploy download_chart
+    - auto-deploy ensure_namespace
+    - auto-deploy create_secret
+    - auto-deploy deploy
+  environment:
+    name: production/platform-b
+    url: https://platform-b.prod.tower.rumblegames.com/
   rules:
     - if: '$CI_KUBERNETES_ACTIVE == null || $CI_KUBERNETES_ACTIVE == ""'
       when: never

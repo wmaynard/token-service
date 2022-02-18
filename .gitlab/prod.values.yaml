@@ -37,7 +37,7 @@ hpa:
   keda:
     enabled: true
     requestsPerSecond: "100"
-    serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
+    serverAddress: http://prometheus-server.gitlab-managed-apps.svc:80
 gitlab:
   app:
   env:
@@ -49,9 +49,9 @@ service:
   annotations: {}
   name: ts-prod # 15 character limit..
   type: NodePort
-  url: https://platform.prod.tower.rumblegames.com/
+  url: 
   additionalHosts:
-  commonName: platform.prod.tower.rumblegames.com
+  commonName: 
   externalPort: 5000
   internalPort: 80
 ingress:
@@ -59,8 +59,8 @@ ingress:
   paths:
     - "/token"
   tls:
-    enabled: true
-    acme: true
+    enabled: false
+    acme: false
     secretName: "token-service-prod"
     useDefaultSecret: false
   annotations:

@@ -47,7 +47,7 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ts-prod # 15 character limit..
+  name: ts-prod-b # 15 character limit..
   type: NodePort
   url: 
   additionalHosts:

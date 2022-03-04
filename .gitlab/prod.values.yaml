@@ -37,7 +37,7 @@ hpa:
   keda:
     enabled: true
     requestsPerSecond: "100"
-    serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
+    serverAddress: http://prometheus-server.gitlab-managed-apps.svc:80
 gitlab:
   app:
   env:
@@ -47,11 +47,11 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ts-dev # 15 character limit..
+  name: ts-prod # 15 character limit..
   type: NodePort
-  url: https://dev.nonprod.tower.cdrentertainment.com/
+  url: 
   additionalHosts:
-  commonName: dev.nonprod.tower.cdrentertainment.com
+  commonName: 
   externalPort: 5000
   internalPort: 80
 ingress:
@@ -61,7 +61,7 @@ ingress:
   tls:
     enabled: false
     acme: false
-    secretName: "token-service-dev"
+    secretName: "token-service-prod"
     useDefaultSecret: false
   annotations:
     kubernetes.io/ingress.class: "nginx"
@@ -111,10 +111,8 @@ postgresql:
 
 resources:
   limits:
-    cpu: 128m
     memory: 128Mi
   requests:
-    cpu: 128m
     memory: 128Mi
 
 ## Configure PodDisruptionBudget

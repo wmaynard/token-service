@@ -10,7 +10,7 @@ namespace TokenService.Exceptions
 		public string Reason { get; private set; }
 		public TokenInfo Token { get; private set; }
 
-		public AuthException(TokenInfo token, string reason) : base("Token is invalid.")
+		public AuthException(TokenInfo token, string reason) : base(reason ?? "Token is invalid.")
 		{
 			Token = token;
 			Reason = reason;

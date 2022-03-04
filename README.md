@@ -104,7 +104,7 @@ Token Service relies on the use of two key files to authenticate tokens via RSA.
 
 To generate new key files, run the following commands in Terminal:
 
-1. `openssl genrsa -in private.pem 512`
+1. `openssl genrsa -out private.pem 512`
 2. `openssl rsa -in private.pem -pubout -out public.pem`
 
 When working locally, you can drop these into the base directory of your project.

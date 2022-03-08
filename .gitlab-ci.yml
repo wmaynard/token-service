@@ -46,7 +46,7 @@ build_app:
     - dotnet nuget add source --username eric.sheris --password $NUGET_PAT --store-password-in-clear-text --name github "https://gitlab.cdrentertainment.com/api/v4/projects/14/packages/nuget/index.json"
     - dotnet restore
     - dotnet build --no-restore --configuration Release
-    - CURRENTVERSION="$(dotnet ./bin/Release/net6.0/token-service.dll -version | cut -d':' -f2)"
+    - CURRENTVERSION="$(dotnet ./bin/Release/net5.0/token-service.dll -version | cut -d':' -f2)"
     - echo $CURRENTVERSION
     - git tag $CURRENTVERSION; git push https://eric.sheris:${NUGET_PAT}@gitlab.cdrentertainment.com/platform-services/$CI_PROJECT_NAME.git --tags
   artifacts:

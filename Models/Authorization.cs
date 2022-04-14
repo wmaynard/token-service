@@ -10,207 +10,206 @@ using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using TokenService.Exceptions;
 
-namespace TokenService.Models
+namespace TokenService.Models;
+
+public class Authorization : PlatformDataModel
 {
-	public class Authorization : PlatformDataModel
+	internal const string ISSUER = "Rumble Token Service";
+	internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
+	internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
+
+	private const string CLAIM_KEY_ISSUED_AT = "iat";
+	private const string CLAIM_KEY_AUDIENCE = "aud";
+	
+	internal const string DB_KEY_CREATED = "ts";
+	internal const string DB_KEY_EXPIRATION = "xp";
+	internal const string DB_KEY_IS_ADMIN = "su";
+	internal const string DB_KEY_IS_VALID = "ok";
+	internal const string DB_KEY_ISSUER = "iss";
+	internal const string DB_KEY_ORIGIN = "org";
+	internal const string DB_KEY_TOKEN = "val";
+
+	public const string FRIENDLY_KEY_CREATED = "created";
+	public const string FRIENDLY_KEY_EXPIRATION = "expiration";
+	public const string FRIENDLY_KEY_IS_ADMIN = "isAdmin";
+	public const string FRIENDLY_KEY_IS_VALID = "isValid";
+	public const string FRIENDLY_KEY_ISSUER = "issuer";
+	public const string FRIENDLY_KEY_ORIGIN = "origin";
+	public const string FRIENDLY_KEY_TOKEN = "token";
+	
+	[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public long Created { get; internal set; }
+	
+	[SimpleIndex(DB_KEY_TOKEN, FRIENDLY_KEY_TOKEN)]
+	[BsonElement(DB_KEY_TOKEN)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKEN)]
+	public string EncryptedToken { get; internal set; }
+	
+	[SimpleIndex(DB_KEY_EXPIRATION, FRIENDLY_KEY_EXPIRATION)]
+	[BsonElement(DB_KEY_EXPIRATION)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EXPIRATION)]
+	public long Expiration { get; internal set; }
+	
+	[BsonElement(DB_KEY_IS_ADMIN), BsonIgnoreIfDefault]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_ADMIN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public bool IsAdmin { get; private set; }
+	
+	[BsonElement(DB_KEY_IS_VALID)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_VALID)]
+	public bool IsValid { get; internal set; }
+	
+	[BsonElement(DB_KEY_ISSUER)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ISSUER)]
+	public string Issuer { get; private set; }
+	
+	[BsonElement(DB_KEY_ORIGIN)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ORIGIN)]
+	public string Origin { get; internal set; }
+	
+	[BsonIgnore]
+	[JsonIgnore]
+	public long SecondsRemaining => Expiration - Created;
+	
+	// TODO: Privatize
+
+	public Authorization(TokenInfo info, string origin, long lifetimeDays = 4, bool isAdmin = false)
 	{
-		internal const string ISSUER = "Rumble Token Service";
-		internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
-		internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
+		Issuer = ISSUER;
+		IsAdmin = isAdmin;
+		IsValid = true;
+		
+		Origin = origin;
 
-		private const string CLAIM_KEY_ISSUED_AT = "iat";
-		private const string CLAIM_KEY_AUDIENCE = "aud";
+		lifetimeDays = IsAdmin
+			? Math.Min(3650, lifetimeDays) // Maximum lifetime of 10 years.
+			: Math.Min(5, lifetimeDays); // Maximum lifetime of 5 days.
 		
-		internal const string DB_KEY_CREATED = "ts";
-		internal const string DB_KEY_EXPIRATION = "xp";
-		internal const string DB_KEY_IS_ADMIN = "su";
-		internal const string DB_KEY_IS_VALID = "ok";
-		internal const string DB_KEY_ISSUER = "iss";
-		internal const string DB_KEY_ORIGIN = "org";
-		internal const string DB_KEY_TOKEN = "val";
-
-		public const string FRIENDLY_KEY_CREATED = "created";
-		public const string FRIENDLY_KEY_EXPIRATION = "expiration";
-		public const string FRIENDLY_KEY_IS_ADMIN = "isAdmin";
-		public const string FRIENDLY_KEY_IS_VALID = "isValid";
-		public const string FRIENDLY_KEY_ISSUER = "issuer";
-		public const string FRIENDLY_KEY_ORIGIN = "origin";
-		public const string FRIENDLY_KEY_TOKEN = "token";
-		
-		[BsonElement(DB_KEY_CREATED), BsonIgnoreIfDefault]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-		public long Created { get; internal set; }
-		
-		[SimpleIndex(DB_KEY_TOKEN, FRIENDLY_KEY_TOKEN)]
-		[BsonElement(DB_KEY_TOKEN)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKEN)]
-		public string EncryptedToken { get; internal set; }
-		
-		[SimpleIndex(DB_KEY_EXPIRATION, FRIENDLY_KEY_EXPIRATION)]
-		[BsonElement(DB_KEY_EXPIRATION)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EXPIRATION)]
-		public long Expiration { get; internal set; }
-		
-		[BsonElement(DB_KEY_IS_ADMIN), BsonIgnoreIfDefault]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_ADMIN), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-		public bool IsAdmin { get; private set; }
-		
-		[BsonElement(DB_KEY_IS_VALID)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_IS_VALID)]
-		public bool IsValid { get; internal set; }
-		
-		[BsonElement(DB_KEY_ISSUER)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ISSUER)]
-		public string Issuer { get; private set; }
-		
-		[BsonElement(DB_KEY_ORIGIN)]
-		[JsonInclude, JsonPropertyName(FRIENDLY_KEY_ORIGIN)]
-		public string Origin { get; internal set; }
-		
-		[BsonIgnore]
-		[JsonIgnore]
-		public long SecondsRemaining => Expiration - Created;
-		
-		// TODO: Privatize
-
-		public Authorization(TokenInfo info, string origin, long lifetimeDays = 4, bool isAdmin = false)
+		DateTimeOffset now = DateTimeOffset.Now;
+		Created = now.ToUnixTimeSeconds();
+		try
 		{
-			Issuer = ISSUER;
-			IsAdmin = isAdmin;
-			IsValid = true;
-			
-			Origin = origin;
-
-			lifetimeDays = IsAdmin
-				? Math.Min(3650, lifetimeDays) // Maximum lifetime of 10 years.
-				: Math.Min(5, lifetimeDays); // Maximum lifetime of 5 days.
-			
-			DateTimeOffset now = DateTimeOffset.Now;
-			Created = now.ToUnixTimeSeconds();
-			try
+			Expiration = now.AddDays(lifetimeDays).ToUnixTimeSeconds();
+		}
+		catch (ArgumentOutOfRangeException)
+		{
+			Log.Warn(Owner.Default, "A token was generated that effectively doesn't expire.", data: new
 			{
-				Expiration = now.AddDays(lifetimeDays).ToUnixTimeSeconds();
-			}
-			catch (ArgumentOutOfRangeException)
-			{
-				Log.Warn(Owner.Default, "A token was generated that effectively doesn't expire.", data: new
-				{
-					User = info,
-					Origin = origin
-				});
-				Expiration = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
-			}
-
-			info.Expiration = Expiration;
-			info.IsAdmin = isAdmin;
-			
-			EncryptedToken = GenerateToken(info);
+				User = info,
+				Origin = origin
+			});
+			Expiration = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
 		}
 
-		/// <summary>
-		/// Decodes and validates an encrypted token.
-		/// </summary>
-		/// <param name="token">The token to decode.</param>
-		/// <returns>Information that was embedded in the token.</returns>
-		internal static TokenInfo Decode(string token)
-		{
-			token = token?.Replace("Bearer ", "");
-			if (string.IsNullOrWhiteSpace(token))
-				throw new AuthException(null, "No token provided.");
-			try
-			{
-				Dictionary<string, object> claims = JsonWebToken.Decode(token);
-
-				claims.TryGetValue(TokenInfo.DB_KEY_ACCOUNT_ID, out object aid);
-				claims.TryGetValue(TokenInfo.DB_KEY_SCREENNAME, out object sn);
-				claims.TryGetValue(TokenInfo.DB_KEY_DISCRIMINATOR, out object disc);
-				claims.TryGetValue(TokenInfo.DB_KEY_IS_ADMIN, out object admin);
-				claims.TryGetValue(TokenInfo.DB_KEY_EMAIL_ADDRESS, out object email);
-				claims.TryGetValue(TokenInfo.DB_KEY_EXPIRATION, out object expiration);
-				claims.TryGetValue(TokenInfo.DB_KEY_ISSUER, out object issuer);
-				claims.TryGetValue(TokenInfo.DB_KEY_IP_ADDRESS, out object ip);
-				claims.TryGetValue(TokenInfo.DB_KEY_COUNTRY_CODE, out object countryCode);
-				claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
-				claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
-
-				TokenInfo output = new TokenInfo(token)
-				{
-					AccountId = (string) aid,
-					ScreenName = (string) sn,
-					Discriminator = Convert.ToInt32(disc ?? -1),
-					IsAdmin = (bool) (admin ?? false),
-					Email = (string) email,
-					Expiration = Convert.ToInt64(expiration),
-					Issuer = (string) issuer,
-					IpAddress = (string) ip,
-					CountryCode = (string) countryCode
-				};
-				if (output.Email != null)
-					output.Email = Crypto.Decode(output.Email);
-
-				if (!(audiences as object[]).Contains(AUDIENCE))
-					throw new AuthException(output, "Audience mismatch.");
-				if (output.Expiration <= UnixTime)
-					throw new AuthException(output, "Token is expired.");
-				return output;
-			}
-			catch (AuthException)
-			{
-				throw;
-			}
-			catch (IntegrityException e)
-			{
-				// TODO: Raise severity to Critical once player-service-v2 goes live
-				Log.Warn(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
-				{
-					EncryptedToken = token
-				}, exception: e);
-				Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
-				throw new AuthException(null, "Signature mismatch");
-			}
-			catch (Exception e)
-			{
-				Log.Error(Owner.Default, "Unable to decode token.", data: new
-				{
-					EncodedToken = token
-				}, exception: e);
-				throw new AuthException(null, "Unable to decode token.");
-			}
-		}
-
-		private static string GenerateToken(TokenInfo info)
-		{
-			Dictionary<string, object> claims = new Dictionary<string, object>();
-			
-			claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
-			claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
-			claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
-			claims.Add(CLAIM_KEY_ISSUED_AT, UnixTime);
-			claims.Add(CLAIM_KEY_AUDIENCE, new string[]{ AUDIENCE });
-
-			if (info.ScreenName != null)
-				claims.Add(TokenInfo.DB_KEY_SCREENNAME, info.ScreenName);
-			if (info.Discriminator > 0)
-				claims.Add(TokenInfo.DB_KEY_DISCRIMINATOR, info.Discriminator);
-			if (!string.IsNullOrWhiteSpace(info.Email))
-				claims.Add(TokenInfo.DB_KEY_EMAIL_ADDRESS, Crypto.Encode(info.Email));
-			if (!string.IsNullOrWhiteSpace(info.IpAddress))
-				claims.Add(TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress);
-			if (!string.IsNullOrWhiteSpace(info.CountryCode))
-				claims.Add(TokenInfo.DB_KEY_COUNTRY_CODE, info.CountryCode);
-			if (info.IsAdmin)
-				claims.Add(TokenInfo.DB_KEY_IS_ADMIN, true);
-
-			return new JsonWebToken(claims).EncodedString;
-		}
-
-		/// <summary>
-		/// Partially obscures a sensitive string for logging or otherwise visible purposes.  Values at the beginning and end remain visible.
-		/// TODO: this might be useful in platform-common
-		/// </summary>
-		/// <param name="sensitive">The string to partially hide.</param>
-		/// <param name="length">The number of characters at BOTH beginning and end to display.</param>
-		/// <returns>A string in the format "foo...bar", where the ellipsis replaces everything in the middle of the string.</returns>
-		private static string Obscure(string sensitive, int length = 4) => sensitive.Length > length * 2 ? $"{sensitive[..length]}...{sensitive[^length..]}" : "too_short";
+		info.Expiration = Expiration;
+		info.IsAdmin = isAdmin;
+		
+		EncryptedToken = GenerateToken(info);
 	}
+
+	/// <summary>
+	/// Decodes and validates an encrypted token.
+	/// </summary>
+	/// <param name="token">The token to decode.</param>
+	/// <returns>Information that was embedded in the token.</returns>
+	internal static TokenInfo Decode(string token)
+	{
+		token = token?.Replace("Bearer ", "");
+		if (string.IsNullOrWhiteSpace(token))
+			throw new AuthException(null, "No token provided.");
+		try
+		{
+			Dictionary<string, object> claims = JsonWebToken.Decode(token);
+
+			claims.TryGetValue(TokenInfo.DB_KEY_ACCOUNT_ID, out object aid);
+			claims.TryGetValue(TokenInfo.DB_KEY_SCREENNAME, out object sn);
+			claims.TryGetValue(TokenInfo.DB_KEY_DISCRIMINATOR, out object disc);
+			claims.TryGetValue(TokenInfo.DB_KEY_IS_ADMIN, out object admin);
+			claims.TryGetValue(TokenInfo.DB_KEY_EMAIL_ADDRESS, out object email);
+			claims.TryGetValue(TokenInfo.DB_KEY_EXPIRATION, out object expiration);
+			claims.TryGetValue(TokenInfo.DB_KEY_ISSUER, out object issuer);
+			claims.TryGetValue(TokenInfo.DB_KEY_IP_ADDRESS, out object ip);
+			claims.TryGetValue(TokenInfo.DB_KEY_COUNTRY_CODE, out object countryCode);
+			claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
+			claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
+
+			TokenInfo output = new TokenInfo(token)
+			{
+				AccountId = (string) aid,
+				ScreenName = (string) sn,
+				Discriminator = Convert.ToInt32(disc ?? -1),
+				IsAdmin = (bool) (admin ?? false),
+				Email = (string) email,
+				Expiration = Convert.ToInt64(expiration),
+				Issuer = (string) issuer,
+				IpAddress = (string) ip,
+				CountryCode = (string) countryCode
+			};
+			if (output.Email != null)
+				output.Email = Crypto.Decode(output.Email);
+
+			if (!(audiences as object[]).Contains(AUDIENCE))
+				throw new AuthException(output, "Audience mismatch.");
+			if (output.Expiration <= UnixTime)
+				throw new AuthException(output, "Token is expired.");
+			return output;
+		}
+		catch (AuthException)
+		{
+			throw;
+		}
+		catch (IntegrityException e)
+		{
+			// TODO: Raise severity to Critical once player-service-v2 goes live
+			Log.Warn(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
+			{
+				EncryptedToken = token
+			}, exception: e);
+			Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
+			throw new AuthException(null, "Signature mismatch");
+		}
+		catch (Exception e)
+		{
+			Log.Error(Owner.Default, "Unable to decode token.", data: new
+			{
+				EncodedToken = token
+			}, exception: e);
+			throw new AuthException(null, "Unable to decode token.");
+		}
+	}
+
+	private static string GenerateToken(TokenInfo info)
+	{
+		Dictionary<string, object> claims = new Dictionary<string, object>();
+		
+		claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
+		claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
+		claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
+		claims.Add(CLAIM_KEY_ISSUED_AT, UnixTime);
+		claims.Add(CLAIM_KEY_AUDIENCE, new string[]{ AUDIENCE });
+
+		if (info.ScreenName != null)
+			claims.Add(TokenInfo.DB_KEY_SCREENNAME, info.ScreenName);
+		if (info.Discriminator > 0)
+			claims.Add(TokenInfo.DB_KEY_DISCRIMINATOR, info.Discriminator);
+		if (!string.IsNullOrWhiteSpace(info.Email))
+			claims.Add(TokenInfo.DB_KEY_EMAIL_ADDRESS, Crypto.Encode(info.Email));
+		if (!string.IsNullOrWhiteSpace(info.IpAddress))
+			claims.Add(TokenInfo.DB_KEY_IP_ADDRESS, info.IpAddress);
+		if (!string.IsNullOrWhiteSpace(info.CountryCode))
+			claims.Add(TokenInfo.DB_KEY_COUNTRY_CODE, info.CountryCode);
+		if (info.IsAdmin)
+			claims.Add(TokenInfo.DB_KEY_IS_ADMIN, true);
+
+		return new JsonWebToken(claims).EncodedString;
+	}
+
+	/// <summary>
+	/// Partially obscures a sensitive string for logging or otherwise visible purposes.  Values at the beginning and end remain visible.
+	/// TODO: this might be useful in platform-common
+	/// </summary>
+	/// <param name="sensitive">The string to partially hide.</param>
+	/// <param name="length">The number of characters at BOTH beginning and end to display.</param>
+	/// <returns>A string in the format "foo...bar", where the ellipsis replaces everything in the middle of the string.</returns>
+	private static string Obscure(string sensitive, int length = 4) => sensitive.Length > length * 2 ? $"{sensitive[..length]}...{sensitive[^length..]}" : "too_short";
 }

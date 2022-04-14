@@ -15,6 +15,7 @@ namespace TokenService.Controllers;
 public abstract class TokenAuthController : PlatformController
 {
 	private const string KEY_USER_INFO = "UserInfo";
+	
 	protected readonly IdentityService _identityService;
 
 	protected new TokenInfo Token
@@ -29,10 +30,7 @@ public abstract class TokenAuthController : PlatformController
 			return stored;
 		}
 	}
-	protected TokenAuthController(IdentityService identityService, IConfiguration config) : base(config)
-	{
-		_identityService = identityService;
-	}
+	protected TokenAuthController(IdentityService identityService, IConfiguration config) : base(config) => _identityService = identityService;
 
 	[HttpGet, Route("health")]
 	public override ActionResult HealthCheck() => Ok(_identityService.HealthCheckResponseObject);

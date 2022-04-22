@@ -32,7 +32,7 @@ public class SecuredController : TokenAuthController
 
 		Identity identity = _identityService.Find(id);
 		if (identity?.Banned ?? false)
-			throw new AuthException(null, "Account was banned."); // TODO: New exception type
+			throw new AuthException(token: null, "Account was banned."); // TODO: New exception type
 		
 		TokenInfo info = new TokenInfo()
 		{

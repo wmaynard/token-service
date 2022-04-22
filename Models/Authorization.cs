@@ -116,7 +116,7 @@ public class Authorization : PlatformDataModel
 	{
 		token = token?.Replace("Bearer ", "");
 		if (string.IsNullOrWhiteSpace(token))
-			throw new AuthException(null, "No token provided.");
+			throw new AuthException(token: null, "No token provided.");
 		try
 		{
 			Dictionary<string, object> claims = JsonWebToken.Decode(token);
@@ -133,8 +133,9 @@ public class Authorization : PlatformDataModel
 			claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
 			claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
 
-			TokenInfo output = new TokenInfo(token)
+			TokenInfo output = new TokenInfo
 			{
+				Authorization = token,
 				AccountId = (string) aid,
 				ScreenName = (string) sn,
 				Discriminator = Convert.ToInt32(disc ?? -1),
@@ -160,13 +161,7 @@ public class Authorization : PlatformDataModel
 		}
 		catch (IntegrityException e)
 		{
-			// TODO: Raise severity to Critical once player-service-v2 goes live
-			Log.Warn(Owner.Default, "Token signature mismatch!  Someone may be trying to penetrate our security.", data: new
-			{
-				EncryptedToken = token
-			}, exception: e);
-			Graphite.Track(AuthException.GRAPHITE_KEY_ERRORS, 1_000); // exaggerate this to raise alarms
-			throw new AuthException(null, "Signature mismatch");
+			throw new AuthException(encryptedToken: token, "Signature mismatch");
 		}
 		catch (Exception e)
 		{
@@ -174,7 +169,7 @@ public class Authorization : PlatformDataModel
 			{
 				EncodedToken = token
 			}, exception: e);
-			throw new AuthException(null, "Unable to decode token.");
+			throw new AuthException(encryptedToken: token, "Unable to decode token.");
 		}
 	}
 

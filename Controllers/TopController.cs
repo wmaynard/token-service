@@ -1,6 +1,8 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Interop;
 using TokenService.Exceptions;
 using TokenService.Models;
@@ -41,6 +43,4 @@ public class TopController : TokenAuthController
 		
 		return Ok(Token.ResponseObject);
 	}
-	
-	// /health is in the base, TokenAuthController
 }

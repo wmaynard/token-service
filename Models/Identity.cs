@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Web;
 
 namespace TokenService.Models;
@@ -13,6 +14,7 @@ public class Identity : PlatformCollectionDocument
 	internal const string DB_KEY_AUTH_ATTEMPTS = "chx"; // TODO: Aliases
 	internal const string DB_KEY_BANNED = "bnd";
 	internal const string DB_KEY_EMAIL = "e";
+	internal const string DB_KEY_BAN_EXPIRATION = "exp";
 	internal const string DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "hax";
 	internal const string DB_KEY_FAILED_AUTH_ATTEMPTS = "outs";
 	internal const string DB_KEY_INITIAL_USER_INFO = "iwho";
@@ -22,6 +24,7 @@ public class Identity : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_AUTH_ATTEMPTS = "authorizations";
 	public const string FRIENDLY_KEY_BANNED = "banned";
 	public const string FRIENDLY_KEY_EMAIL = "email";
+	public const string FRIENDLY_KEY_BAN_EXPIRATION = "expiration";
 	public const string FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "failedAdminAuthorizations";
 	public const string FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS = "failedAuthorizations";
 	public const string FRIENDLY_KEY_INITIAL_USER_INFO = "initialUserInfo";
@@ -41,14 +44,18 @@ public class Identity : PlatformCollectionDocument
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long AuthAttempts { get; internal set; }
 	
-	[BsonElement(DB_KEY_BANNED)]
+	[BsonElement(DB_KEY_BANNED), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANNED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public bool Banned { get; internal set; }
 	
-	[BsonElement(DB_KEY_EMAIL)]
+	[BsonElement(DB_KEY_EMAIL), BsonIgnoreIfNull]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public string Email { get; internal set; }
 	
+	[BsonElement(DB_KEY_BAN_EXPIRATION), BsonIgnoreIfDefault]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BAN_EXPIRATION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	public long BanExpiration { get; internal set; }
+
 	[BsonElement(DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long FailedAdminAuthAttempts { get; internal set; }

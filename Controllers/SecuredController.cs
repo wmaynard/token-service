@@ -1,6 +1,9 @@
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using RCL.Logging;
+using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using TokenService.Exceptions;
@@ -15,7 +18,8 @@ public class SecuredController : TokenAuthController
 	public const string KEY_ADMIN_SECRET = "key";
 	public SecuredController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
 	
-	[HttpPost, Route("token/generate")]
+	// TODO: since this is now going to be a monitored endpoint, failures like "account was banned" should not be counted
+	[HttpPost, Route("token/generate"), HealthMonitor(weight: 5)]
 	public ObjectResult Generate()
 	{
 		string id = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);

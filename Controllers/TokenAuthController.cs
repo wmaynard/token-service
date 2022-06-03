@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Rumble.Platform.Common.Models;
+using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Web;
 using TokenService.Models;
 using TokenService.Services;
@@ -16,7 +18,9 @@ public abstract class TokenAuthController : PlatformController
 {
 	private const string KEY_USER_INFO = "UserInfo";
 	
+#pragma warning disable
 	protected readonly IdentityService _identityService;
+#pragma warning restore
 
 	protected new TokenInfo Token
 	{
@@ -31,7 +35,4 @@ public abstract class TokenAuthController : PlatformController
 		}
 	}
 	protected TokenAuthController(IdentityService identityService, IConfiguration config) : base(config) => _identityService = identityService;
-
-	[HttpGet, Route("health")]
-	public override ActionResult HealthCheck() => Ok(_identityService.HealthCheckResponseObject);
 }

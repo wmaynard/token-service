@@ -55,11 +55,11 @@ Every secured endpoint requires an `Authorization` header with a value of `Beare
 
 All `/admin` endpoints require a valid admin token.
 
-| Method | Endpoint                  | Description                                     | Required | Optional | Internal Consumers | External Consumers |
-|-------:|:--------------------------|:------------------------------------------------|:---------|:---------|:-------------------|:-------------------|
-|  PATCH | `/token/admin/ban`        | Bans an account from all services.              | `aid`    |          | Portal             |                    |
-|  PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid`    |          | Portal             |                    | 
-|  PATCH | `/token/admin/unban`      | Removes a ban from an account.                  | `aid`    |          | Portal             |                    |
+| Method | Endpoint                  | Description                                     | Required | Optional   | Internal Consumers | External Consumers |
+|-------:|:--------------------------|:------------------------------------------------|:---------|:-----------|:-------------------|:-------------------|
+|  PATCH | `/token/admin/ban`        | Bans an account from all services.              | `aid`    | `duration` | Portal             |                    |
+|  PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid`    |            | Portal             |                    | 
+|  PATCH | `/token/admin/unban`      | Removes a ban from an account.                  | `aid`    |            | Portal             |                    |
 
 ## TopController
 

@@ -17,8 +17,8 @@ namespace TokenService.Models;
 public class Authorization : PlatformDataModel
 {
 	internal const string ISSUER = "Rumble Token Service";
-	internal static readonly string ADMIN_SECRET = PlatformEnvironment.Variable("RUMBLE_KEY");
-	internal static readonly string AUDIENCE = PlatformEnvironment.Variable("GAME_KEY");
+	internal static readonly string ADMIN_SECRET = PlatformEnvironment.Require<string>("RUMBLE_KEY");
+	internal static readonly string AUDIENCE = PlatformEnvironment.Require<string>("GAME_KEY");
 
 	private const string CLAIM_KEY_ISSUED_AT = "iat";
 	private const string CLAIM_KEY_AUDIENCE = "aud";

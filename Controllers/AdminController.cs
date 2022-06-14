@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RCL.Logging;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -85,6 +86,11 @@ public class AdminController : TokenAuthController
 	private void ClearCache(string accountId)
 	{
 		// TODO: Use DC2 to invalidate tokens on every service container
+		if (_config == null)
+			throw new PlatformException("Dynamic config is null.");
+		if (_config.GameConfig == null)
+			throw new PlatformException("Dynamic config's GameConfig section is null.");
+		
 		string url = PlatformEnvironment.Url("player/v2/cachedToken");
 		string adminToken = _config.GameConfig.Require<string>("playerServiceToken");
 

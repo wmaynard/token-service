@@ -89,8 +89,15 @@ public class AdminController : TokenAuthController
 		if (_config == null)
 			throw new PlatformException("Dynamic config is null.");
 		if (_config.GameConfig == null)
+		{
+			Log.Warn(Owner.Will, "Dynamic config is missing values.", data: new
+			{
+				configValues = _config.Values,
+				gameScope = _config.GameId
+			});
 			throw new PlatformException("Dynamic config's GameConfig section is null.");
-		
+		}
+
 		string url = PlatformEnvironment.Url("player/v2/cachedToken");
 		string adminToken = _config.GameConfig.Require<string>("playerServiceToken");
 

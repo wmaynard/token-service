@@ -57,8 +57,7 @@ service:
   internalPort: 80
 ingress:
   enabled: true
-  paths:
-    - "/token"
+  path: "/token"
   tls:
     enabled: false
     acme: false

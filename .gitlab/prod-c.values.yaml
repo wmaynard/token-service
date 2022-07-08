@@ -37,8 +37,8 @@ hpa:
   keda:
     enabled: true
     requestsPerSecond: "10"
-    serverAddress: http://prometheus-prometheus-server.gitlab-managed-apps.svc:80
-    filter: "service"
+    serverAddress: http://prometheus-server.gitlab-managed-apps.svc:80
+    filter: "exported_service"
 gitlab:
   app:
   env:
@@ -48,24 +48,22 @@ gitlab:
 service:
   enabled: true
   annotations: {}
-  name: ts-dev # 15 character limit..
+  name: ts-prod-c # 15 character limit..
   type: NodePort
-  url: https://dev.nonprod.tower.cdrentertainment.com/
+  url: 
   additionalHosts:
-  commonName: dev.nonprod.tower.cdrentertainment.com
+  commonName: 
   externalPort: 5000
   internalPort: 80
 ingress:
   enabled: true
   path: "/token"
   tls:
-    enabled: true
-    acme: true
-    secretName: "token-service-dev"
+    enabled: false
+    acme: false
+    secretName: "token-service-prod"
     useDefaultSecret: false
   annotations:
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
-    kubernetes.io/ingress.class: "nginx"
     nginx.ingress.kubernetes.io/client-body-buffer-size: 1m
   modSecurity:
     enabled: false
@@ -79,8 +77,6 @@ ingress:
   secure:
     enabled: true
     annotations:
-      cert-manager.io/cluster-issuer: "letsencrypt-prod"
-      kubernetes.io/ingress.class: "nginx"
       nginx.ingress.kubernetes.io/client-body-buffer-size: 1m
     paths:
       - "/secured/token"
@@ -113,11 +109,10 @@ postgresql:
 
 resources:
   limits:
-    cpu: 128m
-    memory: 128Mi
+    memory: 256Mi
   requests:
-    cpu: 128m
-    memory: 128Mi
+    cpu: 200m
+    memory: 192Mi
 
 ## Configure PodDisruptionBudget
 ## ref: https://kubernetes.io/docs/concepts/workloads/pods/disruptions/
@@ -173,6 +168,7 @@ persistence:
         # For example, GKE automatically chooses a default storage class and allocate a physical storage.
         # See https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes for more information.
         # storageClass: "myStorage"
+
 
 workers: {}
   # worker:

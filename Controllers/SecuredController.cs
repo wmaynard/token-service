@@ -52,7 +52,7 @@ public class SecuredController : TokenAuthController
 
 		if (identity == null)
 		{
-			Log.Info(Owner.Default, "Token record created for account.", data: new { AccountId = id});
+			Log.Verbose(Owner.Default, "Token record created for account.", data: new { AccountId = id});
 			identity = new Identity(id, info, email);
 			_identityService.Create(identity);
 		}

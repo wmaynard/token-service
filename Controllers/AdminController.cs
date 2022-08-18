@@ -1,3 +1,4 @@
+using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RCL.Logging;
@@ -92,8 +93,8 @@ public class AdminController : TokenAuthController
 		{
 			Log.Warn(Owner.Will, "Dynamic config is missing values.", data: new
 			{
-				configValues = _config.Values,
-				gameScope = _config.GameId
+				keys = _config?.Values.Select(pair => pair.Key).OrderBy(_ => _),
+				gameScope = _config?.GameId
 			});
 			throw new PlatformException("Dynamic config's GameConfig section is null.");
 		}

@@ -167,10 +167,6 @@ public class Authorization : PlatformDataModel
 		}
 		catch (Exception e)
 		{
-			Log.Error(Owner.Default, "Unable to decode token.", data: new
-			{
-				EncodedToken = token
-			}, exception: e);
 			throw new AuthException(encryptedToken: token, "Unable to decode token.");
 		}
 	}

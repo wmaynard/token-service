@@ -22,6 +22,21 @@ public class AdminController : TokenAuthController
 #pragma warning restore
 	
 	public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
+
+	[HttpGet, Route("status")]
+	public ActionResult ViewStatus()
+	{
+		if (!Token.IsAdmin)
+			throw new AuthException(Token, "Admin privileges required.");
+
+		Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
+
+		return Ok(new GenericData
+		{
+			{ "banned", id.Banned },
+			{ "expiration", id.BanExpiration }
+		});
+	}
 	
 	[HttpPatch, Route("ban")]
 	public ActionResult Ban()

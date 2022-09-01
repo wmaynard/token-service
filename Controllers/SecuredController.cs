@@ -38,7 +38,7 @@ public class SecuredController : TokenAuthController
 		if (identity?.Banned ?? false)
 			throw new AuthException(token: null, "Account was banned."); // TODO: New exception type
 		
-		TokenInfo info = new TokenInfo()
+		TokenInfo info = new TokenInfo
 		{
 			AccountId = id,
 			ScreenName = screenName,

@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -46,14 +47,14 @@ public class AdminController : TokenAuthController
 			throw new AuthException(Token, "Admin privileges required.");
 
 		string accountId = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
-		long? duration = Optional<long?>("duration");
+		long? durationInSeconds = Optional<long?>("duration");
 		
 		Identity id = _identityService.Find(accountId);
 		if (id.Banned)
-			Log.Warn(Owner.Default, "Tried to ban an already-banned user.", data: new { AccountId = id.AccountId, Admin = Token });
+			Log.Warn(Owner.Default, "Tried to ban an already-banned user.  Using the longer of the two durations.", data: new { AccountId = id.AccountId, Admin = Token });
 		id.Banned = true;
-		id.BanExpiration = duration != null
-			? Timestamp.UnixTime + (long)duration
+		id.BanExpiration = durationInSeconds != null
+			? Math.Max(id.BanExpiration, Timestamp.UnixTime + (long)durationInSeconds)
 			: default;
 		_identityService.Update(id);
 		

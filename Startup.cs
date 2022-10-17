@@ -11,7 +11,7 @@ public class Startup : PlatformStartup
 {
 	// Since this service is the authority on tokens, it doesn't make sense to ping itself with web requests to validate tokens.
 	// Disabling the Auth filter allows us to avoid the (minor) performance hit for checking auth validations.
-	protected override PlatformOptions Configure(PlatformOptions options) => options
+	protected override PlatformOptions ConfigureOptions(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
 		.SetRegistrationName("Token")
 		.SetPerformanceThresholds(warnMS: 500, errorMS: 2_000, criticalMS: 30_000)

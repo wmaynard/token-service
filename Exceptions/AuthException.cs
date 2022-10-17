@@ -8,6 +8,7 @@ using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 
 namespace TokenService.Exceptions;
 
@@ -35,7 +36,7 @@ public class AuthException : PlatformException
 		// Attempt to extract the encrypted token's claims and cast them to the TokenInfo object regardless.
 		try
 		{
-			GenericData data = JWT.Payload(encryptedToken);
+			RumbleJson data = JWT.Payload(encryptedToken);
 			TokenInfo = data.ToModel<TokenInfo>(fromDbKeys: true);
 			if (TokenInfo.Email != null)
 				TokenInfo.Email = EncryptedString.Decode(TokenInfo.Email);

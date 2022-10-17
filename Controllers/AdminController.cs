@@ -8,6 +8,7 @@ using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
@@ -19,7 +20,8 @@ public class AdminController : TokenAuthController
 {
 #pragma warning disable
 	private readonly ApiService _apiService;
-	private readonly DynamicConfigService _config;
+	private readonly DC2Service _dc2Service;
+	// private readonly DynamicConfigService _config;
 #pragma warning restore
 	
 	public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
@@ -32,7 +34,7 @@ public class AdminController : TokenAuthController
 
 		Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
 
-		return Ok(new GenericData
+		return Ok(new RumbleJson
 		{
 			{ "banned", id.Banned },
 			{ "expiration", id.BanExpiration }
@@ -103,20 +105,19 @@ public class AdminController : TokenAuthController
 	private void ClearCache(string accountId)
 	{
 		// TODO: Use DC2 to invalidate tokens on every service container
-		if (_config == null)
+		if (_dc2Service == null)
 			throw new PlatformException("Dynamic config is null.");
-		if (_config.GameConfig == null)
+		if (_dc2Service.ProjectValues == null)
 		{
 			Log.Warn(Owner.Will, "Dynamic config is missing values.", data: new
 			{
-				keys = _config?.Values.Select(pair => pair.Key).OrderBy(_ => _),
-				gameScope = _config?.GameId
+				k = _dc2Service.AllValues.Select(pair => pair.Key).OrderBy(_ => _)
 			});
 			throw new PlatformException("Dynamic config's GameConfig section is null.");
 		}
 
 		string url = PlatformEnvironment.Url("player/v2/cachedToken");
-		string adminToken = _config.GameConfig.Require<string>("playerServiceToken");
+		string adminToken = _dc2Service.AdminToken;
 
 		for (int i = 0; i < 10; i++) // TODO: This is a kluge until we get the DC2 functionality in
 			_apiService
@@ -127,6 +128,6 @@ public class AdminController : TokenAuthController
 				{
 					Log.Local(Owner.Will, $"Unable to clear the token cache! {url} {(int)apiResponse}");
 				})
-				.Delete(out GenericData response, out int code);
+				.Delete(out RumbleJson response, out int code);
 	}
 }

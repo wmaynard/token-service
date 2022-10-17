@@ -10,6 +10,7 @@ using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 using TokenService.Exceptions;
 
 namespace TokenService.Models;
@@ -153,7 +154,7 @@ public class Authorization : PlatformDataModel
 
 			if (!(audiences as object[]).Contains(AUDIENCE))
 				throw new AuthException(output, "Audience mismatch.");
-			if (output.Expiration <= UnixTime)
+			if (output.Expiration <= Timestamp.UnixTime)
 				throw new AuthException(output, "Token is expired.");
 			return output;
 		}
@@ -178,7 +179,7 @@ public class Authorization : PlatformDataModel
 		claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
 		claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
 		claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
-		claims.Add(CLAIM_KEY_ISSUED_AT, UnixTime);
+		claims.Add(CLAIM_KEY_ISSUED_AT, Timestamp.UnixTime);
 		claims.Add(CLAIM_KEY_AUDIENCE, new string[]{ AUDIENCE });
 
 		if (info.ScreenName != null)

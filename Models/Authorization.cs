@@ -104,6 +104,11 @@ public class Authorization : PlatformDataModel
 			Expiration = DateTimeOffset.MaxValue.ToUnixTimeSeconds();
 		}
 
+		// When Mongo is trying to automatically register models, info will be null.  Prevent the exception with a null-check for now.
+		// TODO: clean this up
+		if (info == null)
+			return;
+
 		info.Expiration = Expiration;
 		info.IsAdmin = isAdmin;
 		

@@ -6,6 +6,8 @@
 		<AssemblyVersion>1.0.*</AssemblyVersion>
 		<Deterministic>false</Deterministic>
 		<LangVersion>10</LangVersion>
+		<Configurations>Debug;Release;Local</Configurations>
+		<Platforms>AnyCPU</Platforms>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -14,7 +16,7 @@
 	  <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.11" />
 	  <PackageReference Include="MongoDB.Driver" Version="2.13.0" />
 	  <PackageReference Include="MongoDB.Driver.Core" Version="2.13.0" />
-	  <PackageReference Include="platform-csharp-common" Version="1.2.5" />
+	  <PackageReference Include="platform-csharp-common" Version="1.2.6" />
 	</ItemGroup>
 
 	<ItemGroup>

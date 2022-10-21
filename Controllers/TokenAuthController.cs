@@ -29,7 +29,9 @@ public abstract class TokenAuthController : PlatformController
 			TokenInfo stored = FromContext<TokenInfo>(KEY_USER_INFO);
 			if (stored != null)
 				return stored;
-			stored = Authorization.Decode(EncryptedToken);
+			
+			string origin = Require<string>("origin");
+			stored = Authorization.Decode(EncryptedToken, origin);
 			Request.HttpContext.Items[KEY_USER_INFO] = stored;
 			return stored;
 		}

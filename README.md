@@ -21,6 +21,7 @@ It's important to note that when you generate a new token, previously-issued tok
 |                Term | Definition                                                                                                                                                                                                                     |
 |--------------------:|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 |     AccountID (aid) | With regards to player accounts, this refers to their MongoDB-generated key.  For administrators, this is a user-defined unique identifier.                                                                                    |
+|            Audience | An array of unique resource IDs that indicate a token is allowed to access that particular resource.                                                                                                                           |
 |       Authorization | An HTTP header in web requests in the form of `Bearer {token}`, where "token" is a generated JWT from Token Service.                                                                                                           |
 |                 Ban | Completely bans the **AccountId** in question.  Regardless of the authorization granted to them, a banned account will fail all validation.                                                                                    |
 |            Game Key | Each game has a unique key that's used to identify it.  When a token is generated, it is linked to a specific resource by a key like this.                                                                                     |
@@ -63,20 +64,27 @@ All `/admin` endpoints require a valid admin token.
 
 ## TopController
 
-| Method | Endpoint           | Description                                                                           | Required | Optional | Internal Consumers         | External Consumers |
-|-------:|:-------------------|:--------------------------------------------------------------------------------------|:---------|:---------|:---------------------------|:-------------------|
-|    GET | `/token/validate/` | Checks to see if a token is valid.  Returns `tokenInfo` if valid, otherwise an error. |          |          | All Services <br /> Portal |                    |
+| Method | Endpoint           | Description                                                                           | Required | Optional   | Internal Consumers         | External Consumers |
+|-------:|:-------------------|:--------------------------------------------------------------------------------------|:---------|:-----------|:---------------------------|:-------------------|
+|    GET | `/token/validate/` | Checks to see if a token is valid.  Returns `tokenInfo` if valid, otherwise an error. | `origin` | `endpoint` | All Services <br /> Portal |                    |
+
+### Paramater breakdown for `/validate`:
+* `origin`: This is the service / project name, as determined by `PlatformEnvironment.ServiceName`.  This is checked against the audience of a token to determine its validity.
+* `endpoint`: This is the endpoint, if applicable, that's asking for the validation.
+
+Both of these fields are used to add important detail to logs when auth exceptions are encountered.  For example, if we were under attack, we would see which endpoints were being used and which service is exposed.
 
 ## SecuredController
 
 All `/secured` endpoints are protected by whitelisted IP addresses when deployed.  This whitelist can be found in the `/.gitlab/dev.values.yaml` file, under the application whitelist section.
 
-| Method | Endpoint                  | Description                                              | Required            | Optional                                                              | Internal Consumers | External Consumers |
-|-------:|:--------------------------|:---------------------------------------------------------|:--------------------|:----------------------------------------------------------------------|:-------------------|:-------------------|
-|   POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`<br />`origin` | `days`<br />`discriminator`<br />`email`<br />`key`<br />`screenname` | player-service     |                    |
+| Method | Endpoint                  | Description                                              | Required            | Optional                                                                              | Internal Consumers              | External Consumers |
+|-------:|:--------------------------|:---------------------------------------------------------|:--------------------|:--------------------------------------------------------------------------------------|:--------------------------------|:-------------------|
+|   POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`<br />`origin` | `audience`<br />`days`<br />`discriminator`<br />`email`<br />`key`<br />`screenname` | player-service<br />dmz-service |                    |
 
 ### Parameter breakdown for `/generateToken`:
 * `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
+* `audience`: This is an array of resource IDs indicating where a token is valid.  Within platform, this is maintained in platform-common/enums/Project.cs.  A wildcard may be used to grant access to all resources.
 * `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5 and for admin tokens is 3650 (ten years); larger values will be ignored.
 * `email`: The email address for an account.  This value is stored in Mongo along with the account.  It is embedded in the token as an encrypted value.
 * `key`: The Rumble Key.  Any token created with this will be an Administrator.
@@ -115,10 +123,24 @@ Because of its very nature, this project can not leverage the `PlatformAuthoriza
 
 Consequently, the standard way of accessing tokens via `PlatformController.Token` doesn't work right out of the box.  `/Controllers/TokenAuthController.cs` restores this functionality.
 
+### Regarding Audiences
+
+Audience strings are maintained in `platform-common/Enums/Audience.cs`.  These enum values use a `Display` attribute that is responsible for giving us the respective audience string.  In order to leverage the full security of a token, these values must be kept up-to-date.  Whenever a new project or service is created, this enum should also be updated.
+
+Whenever any new project begins, to be compatible with Rumble token security:
+     1. Add an entry to this enum.
+     2. Bump the common version numbers and push changes.
+     3. Update token-service's common package and push changes.
+
+ If the new project is something that players should be able to access, you will also need to update a constant in `player-service/Controllers/TopController/TOKEN_AUDIENCE`.
+
+Any relevant admin tokens will also need to be regenerated - and this will have to be done across all environments.
+
+While this can be a nuisance, it's important to do this maintenance.  The audience acts as our permissions system and dictates who can interact with what.  For example, it doesn't make sense for player tokens to directly interact with internal tools like dynamic config or the calendar service.
+
 ## Future Updates, Optimizations, and Nice-to-Haves
 
 * A list of aliases for all accounts would be nice for auditing purposes.
-* Explore additional options for adding permissions (audiences) for tokens.
 
 ## Troubleshooting
 

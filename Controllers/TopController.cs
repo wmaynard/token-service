@@ -18,29 +18,28 @@ public class TopController : TokenAuthController
 	[HttpGet, Route("validate")]
 	public ActionResult Validate() // TODO: common | EncryptedToken
 	{
-		string origin = Optional<string>("origin");
-		// TODO: Add origin to TokenInfo
-		// TODO: Create JIRA task to make origin REQUIRED
+		string origin = Require<string>("origin");
+		string endpoint = Optional<string>("endpoint");
 		
 		if (Token.IsExpired)
-			throw new AuthException(Token, origin, "Token has expired.");
+			throw new AuthException(Token, origin, endpoint, "Token has expired.");
 
 		Identity id = _identityService.Find(Token.AccountId);
 		if (id.Banned)
-			throw new AuthException(Token, origin, "Account was banned.");
+			throw new AuthException(Token, origin, endpoint, "Account was banned.");
 		
 		Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
 
 		if (authorization == null)
-			throw new AuthException(Token, origin, "Token is too old and has been replaced by newer tokens.");
+			throw new AuthException(Token, origin, endpoint, "Token is too old and has been replaced by newer tokens.");
 		if (!authorization.IsValid)
-			throw new AuthException(Token, origin, "Token was invalidated.");
+			throw new AuthException(Token, origin, endpoint, "Token was invalidated.");
 
 		string name = Token.IsAdmin
 			? "admin-tokens-validated"
 			: "tokens-validated";
 		Graphite.Track(name, 1);
 		
-		return Ok(Token.ResponseObject);
+		return Ok(Token);
 	}
 }

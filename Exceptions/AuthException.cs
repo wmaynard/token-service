@@ -1,5 +1,6 @@
 using System;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Jose;
 using MongoDB.Bson.Serialization;
 using RCL.Logging;
@@ -18,6 +19,8 @@ public class AuthException : PlatformException
 	public string Reason { get; private set; }
 	public TokenInfo TokenInfo { get; private set; }
 	public string Origin { get; private set; }
+	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public string Endpoint { get; private set; }
 	
 	// TODO: These details do not show up in logs, requires fix in platform-common
 	public AuthException(TokenInfo token, string reason) : base(reason ?? "Token is invalid.")
@@ -28,7 +31,11 @@ public class AuthException : PlatformException
 		Graphite.Track(GRAPHITE_KEY_ERRORS, 1);
 	}
 
-	public AuthException(TokenInfo token, string origin, string reason) : this(token, reason) => Origin = origin;
+	public AuthException(TokenInfo token, string origin, string endpoint, string reason) : this(token, reason)
+	{
+		Origin = origin;
+		Endpoint = endpoint;
+	}
 
 	public AuthException(string encryptedToken, string reason) : this(token: null, reason)
 	{

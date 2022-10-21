@@ -1,8 +1,11 @@
 using System.Linq;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Enums;
+using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -22,32 +25,41 @@ public class SecuredController : TokenAuthController
 	[HttpPost, Route("token/generate"), HealthMonitor(weight: 5)]
 	public ObjectResult Generate()
 	{
+		string wildcard = Audience.All.GetDisplayName();
+
 		string id = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
 		string screenName = Optional<string>(TokenInfo.FRIENDLY_KEY_SCREENNAME);
 		int disc = Optional<int?>(TokenInfo.FRIENDLY_KEY_DISCRIMINATOR) ?? -1;
 		string origin = Require<string>(Authorization.FRIENDLY_KEY_ORIGIN);
 		string email = Optional<string>(Identity.FRIENDLY_KEY_EMAIL);
 		long lifetime = Optional<long?>("days") ?? 5;
-		string ipAddress = Optional<string>("ipAddress");
-		string countryCode = Optional<string>("countryCode");
+		string ipAddress = Optional<string>(TokenInfo.FRIENDLY_KEY_IP_ADDRESS);
+		string countryCode = Optional<string>(TokenInfo.FRIENDLY_KEY_COUNTRY_CODE);
+		string[] audience = Optional<string[]>(TokenInfo.FRIENDLY_KEY_AUDIENCE);
 
 		string secret = Optional<string>(KEY_ADMIN_SECRET); // if this is present, check to see if it matches for admin access
-		bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == Authorization.ADMIN_SECRET;
+		bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == PlatformEnvironment.RumbleSecret;
 
 		Identity identity = _identityService.Find(id);
 		if (identity?.Banned ?? false)
 			throw new AuthException(token: null, "Account was banned."); // TODO: New exception type
-		
+
+		if (audience == null || (audience.Length > 1 && audience.Contains(wildcard)))
+			audience = new [] { wildcard };
+
 		TokenInfo info = new TokenInfo
 		{
 			AccountId = id,
+			Audience = audience.Distinct().OrderBy(_ => _).ToArray(),
 			ScreenName = screenName,
 			Discriminator = disc,
 			Email = email,
 			IsAdmin = isAdmin,
 			Issuer = Authorization.ISSUER,
 			IpAddress = ipAddress,
-			CountryCode = countryCode
+			GameKey = PlatformEnvironment.GameSecret,
+			CountryCode = countryCode,
+			Requester = origin
 		};
 
 		if (identity == null)
@@ -67,6 +79,6 @@ public class SecuredController : TokenAuthController
 			identity.Email = email;
 		_identityService.Update(identity);
 
-		return Ok(auth.ResponseObject, info.ResponseObject);
+		return Ok(auth, info);
 	}
 }

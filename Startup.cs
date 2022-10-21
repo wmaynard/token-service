@@ -14,6 +14,7 @@ public class Startup : PlatformStartup
 	protected override PlatformOptions ConfigureOptions(PlatformOptions options) => options
 		.SetProjectOwner(Owner.Will)
 		.SetRegistrationName("Token")
+		.SetTokenAudience(Audience.TokenService)
 		.SetPerformanceThresholds(warnMS: 500, errorMS: 2_000, criticalMS: 30_000)
 		.DisableFeatures(CommonFeature.ConsoleObjectPrinting)
 		.DisableFilters(CommonFilter.Authorization)

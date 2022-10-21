@@ -6,6 +6,8 @@ using Jose;
 using MongoDB.Bson.Serialization.Attributes;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
+using Rumble.Platform.Common.Enums;
+using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Interop;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Utilities;
@@ -18,11 +20,10 @@ namespace TokenService.Models;
 public class Authorization : PlatformDataModel
 {
 	internal const string ISSUER = "Rumble Token Service";
-	internal static readonly string ADMIN_SECRET = PlatformEnvironment.Require<string>("RUMBLE_KEY");
-	internal static readonly string AUDIENCE = PlatformEnvironment.Require<string>("GAME_KEY");
+	// internal static readonly string AUDIENCE = PlatformEnvironment.Require<string>("GAME_KEY");
 
-	private const string CLAIM_KEY_ISSUED_AT = "iat";
-	private const string CLAIM_KEY_AUDIENCE = "aud";
+	// private const string CLAIM_KEY_ISSUED_AT = "iat";
+	// private const string CLAIM_KEY_AUDIENCE = "aud";
 	
 	internal const string DB_KEY_CREATED = "ts";
 	internal const string DB_KEY_EXPIRATION = "xp";
@@ -84,7 +85,7 @@ public class Authorization : PlatformDataModel
 		
 		Origin = origin;
 
-		lifetimeDays = IsAdmin
+		lifetimeDays = IsAdmin || PlatformEnvironment.IsLocal
 			? Math.Min(3650, lifetimeDays) // Maximum lifetime of 10 years.
 			: Math.Min(5, lifetimeDays); // Maximum lifetime of 5 days.
 		
@@ -119,8 +120,9 @@ public class Authorization : PlatformDataModel
 	/// Decodes and validates an encrypted token.
 	/// </summary>
 	/// <param name="token">The token to decode.</param>
+	/// <param name="requestingService">The ServiceName of the requesting entity.</param>
 	/// <returns>Information that was embedded in the token.</returns>
-	internal static TokenInfo Decode(string token)
+	internal static TokenInfo Decode(string token, string requestingService)
 	{
 		token = token?.Replace("Bearer ", "");
 		if (string.IsNullOrWhiteSpace(token))
@@ -138,29 +140,61 @@ public class Authorization : PlatformDataModel
 			claims.TryGetValue(TokenInfo.DB_KEY_ISSUER, out object issuer);
 			claims.TryGetValue(TokenInfo.DB_KEY_IP_ADDRESS, out object ip);
 			claims.TryGetValue(TokenInfo.DB_KEY_COUNTRY_CODE, out object countryCode);
-			claims.TryGetValue(CLAIM_KEY_AUDIENCE, out object audiences);
-			claims.TryGetValue(CLAIM_KEY_ISSUED_AT, out object issuedAt);
+			claims.TryGetValue(TokenInfo.DB_KEY_AUDIENCE, out object audienceObject);
+			claims.TryGetValue(TokenInfo.DB_KEY_REQUESTER, out object requester);
+			claims.TryGetValue(TokenInfo.DB_KEY_ISSUED_AT, out object issuedAt);
+			claims.TryGetValue(TokenInfo.DB_KEY_GAME, out object gameKey);
+
+			string[] audience = Array.Empty<string>();
+			try
+			{
+				audience = ((object[])audienceObject)
+					.Select(obj => (string)obj)
+					.ToArray();
+			}
+			catch { }
 
 			TokenInfo output = new TokenInfo
 			{
+				Audience = audience,
 				Authorization = token,
 				AccountId = (string) aid,
 				ScreenName = (string) sn,
 				Discriminator = Convert.ToInt32(disc ?? -1),
 				IsAdmin = (bool) (admin ?? false),
+				IssuedAt = Convert.ToInt64(issuedAt),
 				Email = (string) email,
 				Expiration = Convert.ToInt64(expiration),
 				Issuer = (string) issuer,
 				IpAddress = (string) ip,
-				CountryCode = (string) countryCode
+				GameKey = (string) gameKey,
+				CountryCode = (string) countryCode,
+				Requester = (string) requester
 			};
 			if (output.Email != null)
 				output.Email = Crypto.Decode(output.Email);
-
-			if (!(audiences as object[]).Contains(AUDIENCE))
-				throw new AuthException(output, "Audience mismatch.");
+			
+			// Begin validation; if the token fails any necessary criteria, throw auth exceptions.
 			if (output.Expiration <= Timestamp.UnixTime)
 				throw new AuthException(output, "Token is expired.");
+
+			// TODO: Remove this by 12/1.
+			if (output.Audience.Contains(PlatformEnvironment.GameSecret))
+			{
+				Log.Warn(Owner.Will, "Token should be re-generated; it is using an old claims standard.");
+				return output;
+			}
+			
+			if (output.GameKey != PlatformEnvironment.GameSecret)
+				throw new AuthException(output, "Environment mismatch; token's game key is incorrect.");
+
+			// All tokens are necessarily allowed to hit token-service.
+			if (requestingService != Audience.TokenService.GetDisplayName())
+				return output;
+			
+			// Ensure that the token is valid on the provided service.
+			if (!output.Audience.Contains(Audience.All.GetDisplayName()) && !output.Audience.Contains(requestingService))
+				throw new AuthException(output, "Audience mismatch; token is not permitted on this resource.");
 			return output;
 		}
 		catch (AuthException)
@@ -184,8 +218,8 @@ public class Authorization : PlatformDataModel
 		claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
 		claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
 		claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
-		claims.Add(CLAIM_KEY_ISSUED_AT, Timestamp.UnixTime);
-		claims.Add(CLAIM_KEY_AUDIENCE, new string[]{ AUDIENCE });
+		claims.Add(TokenInfo.DB_KEY_ISSUED_AT, Timestamp.UnixTime);
+		claims.Add(TokenInfo.DB_KEY_AUDIENCE, info.Audience);
 
 		if (info.ScreenName != null)
 			claims.Add(TokenInfo.DB_KEY_SCREENNAME, info.ScreenName);
@@ -199,6 +233,10 @@ public class Authorization : PlatformDataModel
 			claims.Add(TokenInfo.DB_KEY_COUNTRY_CODE, info.CountryCode);
 		if (info.IsAdmin)
 			claims.Add(TokenInfo.DB_KEY_IS_ADMIN, true);
+		if (info.Requester != null)
+			claims.Add(TokenInfo.DB_KEY_REQUESTER, info.Requester);
+		if (info.GameKey != null)
+			claims.Add(TokenInfo.DB_KEY_GAME, info.GameKey);
 
 		return new JsonWebToken(claims).EncodedString;
 	}

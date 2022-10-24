@@ -30,7 +30,7 @@ public abstract class TokenAuthController : PlatformController
 			if (stored != null)
 				return stored;
 			
-			string origin = Require<string>("origin");
+			string origin = Optional<string>("origin");
 			stored = Authorization.Decode(EncryptedToken, origin);
 			Request.HttpContext.Items[KEY_USER_INFO] = stored;
 			return stored;

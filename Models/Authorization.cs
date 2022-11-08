@@ -45,12 +45,12 @@ public class Authorization : PlatformDataModel
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_CREATED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long Created { get; internal set; }
 	
-	[SimpleIndex(DB_KEY_TOKEN, FRIENDLY_KEY_TOKEN)]
+	[SimpleIndex]
 	[BsonElement(DB_KEY_TOKEN)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKEN)]
 	public string EncryptedToken { get; internal set; }
 	
-	[SimpleIndex(DB_KEY_EXPIRATION, FRIENDLY_KEY_EXPIRATION)]
+	[SimpleIndex]
 	[BsonElement(DB_KEY_EXPIRATION)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EXPIRATION)]
 	public long Expiration { get; internal set; }

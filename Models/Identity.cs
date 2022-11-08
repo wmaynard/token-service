@@ -11,6 +11,7 @@ namespace TokenService.Models;
 public class Identity : PlatformCollectionDocument
 {
 	internal const int MAX_AUTHORIZATIONS_KEPT = 10;
+	internal const string GROUP_UNAUTHORIZED = "unauthorized";
 	
 	internal const string DB_KEY_AUTH_ATTEMPTS = "chx"; // TODO: Aliases
 	internal const string DB_KEY_BANNED = "bnd";
@@ -31,10 +32,10 @@ public class Identity : PlatformCollectionDocument
 	public const string FRIENDLY_KEY_INITIAL_USER_INFO = "initialUserInfo";
 	public const string FRIENDLY_KEY_LATEST_USER_INFO = "userInfo";
 	public const string FRIENDLY_KEY_TOKENS = "tokens";
-
-	[SimpleIndex(TokenInfo.DB_KEY_ACCOUNT_ID, TokenInfo.FRIENDLY_KEY_ACCOUNT_ID)]
+	
 	[BsonElement(TokenInfo.DB_KEY_ACCOUNT_ID)]
 	[JsonInclude, JsonPropertyName(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID)]
+	[SimpleIndex(unique: true)]
 	public string AccountId { get; private set; }
 	
 	[BsonElement(DB_KEY_TOKENS)]
@@ -47,6 +48,7 @@ public class Identity : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_BANNED), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANNED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	[CompoundIndex(group: GROUP_UNAUTHORIZED, priority: 1)]
 	public bool Banned { get; internal set; }
 	
 	[BsonElement(DB_KEY_EMAIL), BsonIgnoreIfNull]
@@ -55,6 +57,7 @@ public class Identity : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_BAN_EXPIRATION), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BAN_EXPIRATION), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	[CompoundIndex(group: GROUP_UNAUTHORIZED, priority: 2)]
 	public long BanExpiration { get; internal set; }
 
 	[BsonElement(DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS), BsonIgnoreIfDefault]

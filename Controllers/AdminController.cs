@@ -20,7 +20,7 @@ public class AdminController : TokenAuthController
 {
 #pragma warning disable
 	private readonly ApiService _apiService;
-	private readonly DC2Service _dc2Service;
+	private readonly DynamicConfig _dynamicConfig;
 	// private readonly DynamicConfigService _config;
 #pragma warning restore
 	
@@ -105,19 +105,19 @@ public class AdminController : TokenAuthController
 	private void ClearCache(string accountId)
 	{
 		// TODO: Use DC2 to invalidate tokens on every service container
-		if (_dc2Service == null)
+		if (_dynamicConfig == null)
 			throw new PlatformException("Dynamic config is null.");
-		if (_dc2Service.ProjectValues == null)
+		if (_dynamicConfig.ProjectValues == null)
 		{
 			Log.Warn(Owner.Will, "Dynamic config is missing values.", data: new
 			{
-				k = _dc2Service.AllValues.Select(pair => pair.Key).OrderBy(_ => _)
+				k = _dynamicConfig.AllValues.Select(pair => pair.Key).OrderBy(_ => _)
 			});
 			throw new PlatformException("Dynamic config's GameConfig section is null.");
 		}
 
 		string url = PlatformEnvironment.Url("player/v2/cachedToken");
-		string adminToken = _dc2Service.AdminToken;
+		string adminToken = _dynamicConfig.AdminToken;
 
 		for (int i = 0; i < 10; i++) // TODO: This is a kluge until we get the DC2 functionality in
 			_apiService

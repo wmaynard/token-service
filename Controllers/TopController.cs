@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Interop;
+using Rumble.Platform.Common.Models;
+using Rumble.Platform.Data;
 using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
@@ -40,6 +42,10 @@ public class TopController : TokenAuthController
 			: "tokens-validated";
 		Graphite.Track(name, 1);
 		
-		return Ok(Token);
+		return Ok(new RumbleJson
+		{
+			{ TokenInfo.KEY_TOKEN_OUTPUT, Token },
+			{ TokenInfo.KEY_TOKEN_LEGACY_OUTPUT, Token } // deprecated; legacy key
+		});
 	}
 }

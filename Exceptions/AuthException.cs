@@ -17,6 +17,8 @@ public class AuthException : PlatformException
 {
 	public const string GRAPHITE_KEY_ERRORS = "auth-errors";
 	public string Reason { get; private set; }
+	
+	[JsonPropertyName(TokenInfo.KEY_TOKEN_OUTPUT)]
 	public TokenInfo TokenInfo { get; private set; }
 	public string Origin { get; private set; }
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

@@ -181,7 +181,10 @@ public class Authorization : PlatformDataModel
 			// TODO: Remove this by 12/1.
 			if (output.Audience.Contains(PlatformEnvironment.GameSecret))
 			{
-				Log.Warn(Owner.Will, "Token should be re-generated; it is using an old claims standard.");
+				Log.Warn(Owner.Will, "Token should be re-generated; it is using an old claims standard.", data: new
+				{
+					Token = token
+				});
 				return output;
 			}
 			

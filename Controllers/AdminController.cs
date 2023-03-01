@@ -21,7 +21,7 @@ public class AdminController : TokenAuthController
 #pragma warning disable
 	private readonly ApiService _apiService;
 	private readonly DynamicConfig _dynamicConfig;
-	// private readonly DynamicConfigService _config;
+	private readonly CacheService _cache;
 #pragma warning restore
 	
 	public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
@@ -73,6 +73,20 @@ public class AdminController : TokenAuthController
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
 
+		bool all = Optional<bool>("allPlayers");
+
+		if (all)
+		{
+			long affected = _identityService.InvalidateAllTokens();
+			Log.Warn(Owner.Default, "All player tokens were invalidated!", data: new
+			{
+				Affected = affected
+			});
+			_cache?.Clear();
+
+			return Ok();
+		}
+
 		string accountId = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
 		Identity id = _identityService.Find(accountId);
 		foreach (Authorization auth in id.Authorizations)
@@ -85,7 +99,7 @@ public class AdminController : TokenAuthController
 
 		return Ok(id.ResponseObject);
 	}
-	
+
 	[HttpPatch, Route("unban")]
 	public ActionResult Unban()
 	{
@@ -104,6 +118,7 @@ public class AdminController : TokenAuthController
 
 	private void ClearCache(string accountId)
 	{
+		_cache?.Clear(accountId);
 		// TODO: Use DC2 to invalidate tokens on every service container
 		if (_dynamicConfig == null)
 			throw new PlatformException("Dynamic config is null.");

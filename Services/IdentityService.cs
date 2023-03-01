@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+using System.Linq;
 using MongoDB.Driver;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
@@ -21,5 +23,10 @@ public class IdentityService : PlatformMongoService<Identity>
 			Builders<Identity>.Update.Set(identity => identity.Banned, false),
 			Builders<Identity>.Update.Set(identity => identity.BanExpiration, default)
 		})
+	).ModifiedCount;
+
+	public long InvalidateAllTokens() => _collection.UpdateMany(
+		filter: Builders<Identity>.Filter.Eq(identity => identity.LatestUserInfo.IsAdmin, false),
+		update: Builders<Identity>.Update.Set(identity => identity.Authorizations, new List<Authorization>())
 	).ModifiedCount;
 }

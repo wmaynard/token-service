@@ -30,7 +30,7 @@ public class TopController : TokenAuthController
 		string origin = Require<string>("origin");
 		string endpoint = Optional<string>("endpoint");
 
-		if (_cache == null || !_cache.HasValue(Token.AccountId, out TokenInfo _))
+		if (_cache == null || !_cache.HasValue(Token.AccountId, out bool _))
 		{
 			if (Token.IsExpired)
 				throw new AuthException(Token, origin, endpoint, "Token has expired.");
@@ -46,7 +46,7 @@ public class TopController : TokenAuthController
 			if (!authorization.IsValid)
 				throw new AuthException(Token, origin, endpoint, "Token was invalidated.");
 			
-			_cache?.Store(Token.AccountId, Token, expirationMS: TokenInfo.CACHE_EXPIRATION);
+			_cache?.Store(Token.AccountId, true, expirationMS: TokenInfo.CACHE_EXPIRATION);
 
 			Graphite.Track(Token.IsAdmin
 					? "admin-tokens-validated"

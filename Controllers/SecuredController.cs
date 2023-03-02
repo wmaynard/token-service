@@ -7,6 +7,7 @@ using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
+using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
 using TokenService.Exceptions;
@@ -19,6 +20,11 @@ namespace TokenService.Controllers;
 public class SecuredController : TokenAuthController
 {
 	public const string KEY_ADMIN_SECRET = "key";
+	
+#pragma warning disable
+	private readonly CacheService _cache;
+#pragma warning restore
+	
 	public SecuredController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
 	
 	// TODO: since this is now going to be a monitored endpoint, failures like "account was banned" should not be counted
@@ -78,6 +84,8 @@ public class SecuredController : TokenAuthController
 		if (email != null)
 			identity.Email = email;
 		_identityService.Update(identity);
+		
+		_cache?.Store(info.AccountId, true, expirationMS: TokenInfo.CACHE_EXPIRATION);
 
 		return Ok(auth, info);
 	}

@@ -24,6 +24,7 @@
 dev:
   extends: .auto-deploy
   stage: dev
+  allow_failure: false
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: token-service-16-dev
@@ -37,6 +38,7 @@ dev:
 stage-a:
   extends: .auto-deploy
   stage: staging
+  allow_failure: false
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
     KUBE_NAMESPACE: token-service-16-stage-a
@@ -48,6 +50,7 @@ stage-a:
 
 stage-b:
   extends: .auto-deploy
+  allow_failure: false
   stage: staging
   variables:
     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com

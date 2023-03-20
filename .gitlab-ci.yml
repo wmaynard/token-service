@@ -93,6 +93,7 @@ sonarqube-check:
 build_image:
   stage: build
   allow_failure: false
+  needs: ["build_app"]
   image:
     name: gcr.io/kaniko-project/executor:debug
     entrypoint: [""]

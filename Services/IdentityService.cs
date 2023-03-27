@@ -25,8 +25,17 @@ public class IdentityService : PlatformMongoService<Identity>
 		})
 	).ModifiedCount;
 
-	public long InvalidateAllTokens() => _collection.UpdateMany(
+	public long InvalidateAllPlayerTokens() => _collection.UpdateMany(
 		filter: Builders<Identity>.Filter.Eq(identity => identity.LatestUserInfo.IsAdmin, false),
 		update: Builders<Identity>.Update.Set(identity => identity.Authorizations, new List<Authorization>())
 	).ModifiedCount;
+
+	public long InvalidateAllTokens(bool includeAdminTokens, long? timestamp) => timestamp == null
+		? InvalidateAllPlayerTokens()
+		: _collection.UpdateMany(
+			filter: includeAdminTokens
+				? _ => true
+				: identity => !identity.LatestUserInfo.IsAdmin,
+			update: Builders<Identity>.Update.PullFilter(identity => identity.Authorizations, auth => auth.Created <= timestamp)
+		).ModifiedCount;
 }

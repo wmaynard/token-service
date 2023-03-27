@@ -66,25 +66,36 @@ public class AdminController : TokenAuthController
 		
 		return Ok(id.ResponseObject);
 	}
-
+	
 	[HttpPatch, Route("invalidate")]
 	public ActionResult Invalidate()
 	{
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
 
-		bool all = Optional<bool>("allPlayers");
+		// PLATF-6293: Admin tokens had been exposed on health checks.  In order to fix this, tokens had to be regenerated.
+		// However, the old tokens are still technically valid.  Invalidating them manually would have required manual deletions
+		// on multiple records in the database directly.  The updates to this endpoint allow us to do it from a single Postman request,
+		// good for future-proofing in the event we leak tokens or otherwise have a security breach.
+		bool all = Optional<bool>("all");								// If not specified, the next two vars are ignored / unnecessary.
+		long? timestamp = Optional<long?>("timestamp");					// If specified, tokens older than this remain valid.
+		bool includeAdminTokens = Optional<bool>("includeAdminTokens");	// If specified, even admin tokens will be affected.
 
 		if (all)
 		{
-			long affected = _identityService.InvalidateAllTokens();
-			Log.Warn(Owner.Default, "All player tokens were invalidated!", data: new
+			long affected = _identityService.InvalidateAllTokens(includeAdminTokens, timestamp);
+			Log.Warn(Owner.Default, "Tokens were invalidated!", data: new
 			{
-				Affected = affected
+				Affected = affected,
+				SpecifiedTimestamp = timestamp,
+				IncludesAdminTokens = includeAdminTokens
 			});
 			_cache?.Clear();
 
-			return Ok();
+			return Ok(new RumbleJson
+			{
+				{ "affected", affected }
+			});
 		}
 
 		string accountId = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);

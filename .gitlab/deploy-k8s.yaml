@@ -65,19 +65,19 @@ stage-a:
 #     name: stage-a
 #     url: https://stage-a.nonprod.tower.cdrentertainment.com/
 
-# stage-b:
-#   extends: .auto-deploy
-#   allow_failure: false
-#   needs: ["dev"]
-#   stage: staging
-#   variables:
-#     KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
-#     KUBE_NAMESPACE: token-service-16-stage-b
-#   tags:
-#     - cluster
-#   environment:
-#     name: stage-b
-#     url: https://stage-b.nonprod.tower.cdrentertainment.com/
+stage-b:
+  extends: .auto-deploy
+  allow_failure: false
+  needs: ["dev"]
+  stage: staging
+  variables:
+    KUBE_INGRESS_BASE_DOMAIN: nonprod.tower.cdrentertainment.com
+    KUBE_NAMESPACE: token-service-16-stage-b
+  tags:
+    - cluster
+  environment:
+    name: stage-b
+    url: https://stage-b.nonprod.tower.cdrentertainment.com/
 
 # stage-c:
 #   extends: .auto-deploy

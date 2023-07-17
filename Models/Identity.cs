@@ -15,6 +15,7 @@ public class Identity : PlatformCollectionDocument
 	
 	internal const string DB_KEY_AUTH_ATTEMPTS = "chx"; // TODO: Aliases
 	internal const string DB_KEY_BANNED = "bnd";
+	internal const string DB_KEY_BANS = "bans";
 	internal const string DB_KEY_EMAIL = "e";
 	internal const string DB_KEY_BAN_EXPIRATION = "exp";
 	internal const string DB_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "hax";
@@ -25,6 +26,7 @@ public class Identity : PlatformCollectionDocument
 
 	public const string FRIENDLY_KEY_AUTH_ATTEMPTS = "authorizations";
 	public const string FRIENDLY_KEY_BANNED = "banned";
+	public const string FRIENDLY_KEY_BANS = "bans";
 	public const string FRIENDLY_KEY_EMAIL = "email";
 	public const string FRIENDLY_KEY_BAN_EXPIRATION = "expiration";
 	public const string FRIENDLY_KEY_FAILED_ADMIN_AUTH_ATTEMPTS = "failedAdminAuthorizations";
@@ -42,14 +44,18 @@ public class Identity : PlatformCollectionDocument
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_TOKENS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
 	public List<Authorization> Authorizations { get; internal set; }
 	
+	[BsonElement(DB_KEY_BANS)]
+	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+	public Ban[] Bans { get; internal set; }
+	
 	[BsonElement(DB_KEY_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long AuthAttempts { get; internal set; }
 	
-	[BsonElement(DB_KEY_BANNED), BsonIgnoreIfDefault]
-	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANNED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-	[CompoundIndex(group: GROUP_UNAUTHORIZED, priority: 1)]
-	public bool Banned { get; internal set; }
+	// [BsonElement(DB_KEY_BANNED), BsonIgnoreIfDefault]
+	// [JsonInclude, JsonPropertyName(FRIENDLY_KEY_BANNED), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+	// [CompoundIndex(group: GROUP_UNAUTHORIZED, priority: 1)]
+	// public bool Banned { get; internal set; }
 	
 	[BsonElement(DB_KEY_EMAIL), BsonIgnoreIfNull]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_EMAIL), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
@@ -75,6 +81,8 @@ public class Identity : PlatformCollectionDocument
 	[BsonElement(DB_KEY_LATEST_USER_INFO)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_LATEST_USER_INFO)]
 	public TokenInfo LatestUserInfo { get; internal set; }
+	
+	public long CreatedOn { get; internal set; }
 	
 	public Identity(string accountId, TokenInfo initialInfo, string email = null)
 	{

@@ -30,29 +30,32 @@ public class TopController : TokenAuthController
 		string origin = Require<string>("origin");
 		string endpoint = Optional<string>("endpoint");
 
-		if (_cache == null || !_cache.HasValue(Token.AccountId, out bool _))
-		{
-			if (Token.IsExpired)
-				throw new AuthException(Token, origin, endpoint, "Token has expired.");
-
-			Identity id = _identityService.Find(Token.AccountId);
-			if (id.Banned)
-				throw new AuthException(Token, origin, endpoint, "Account was banned.");
+		if (_cache?.HasValue(Token.AccountId, out TokenInfo cached) ?? false)
+			return Ok(new RumbleJson
+			{
+				{ TokenInfo.KEY_TOKEN_OUTPUT, cached },
+				{ TokenInfo.KEY_TOKEN_LEGACY_OUTPUT, cached }
+			});
 		
-			Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
+		if (Token.IsExpired)
+			throw new AuthException(Token, origin, endpoint, "Token has expired.");
 
-			if (authorization == null)
-				throw new AuthException(Token, origin, endpoint, "Token is too old and has been replaced by newer tokens.");
-			if (!authorization.IsValid)
-				throw new AuthException(Token, origin, endpoint, "Token was invalidated.");
-			
-			_cache?.Store(Token.AccountId, true, expirationMS: TokenInfo.CACHE_EXPIRATION);
+		Identity id = _identityService.Find2(Token.AccountId);
+		Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
+		
+		if (authorization == null)
+			throw new AuthException(Token, origin, endpoint, "Token has expired, been replaced, or been invalidated.");
+		if (!authorization.IsValid)
+			throw new AuthException(Token, origin, endpoint, "Token was invalidated.");
 
-			Graphite.Track(Token.IsAdmin
-					? "admin-tokens-validated"
-					: "tokens-validated", 1
-			);
-		}
+		Token.Bans = id.Bans;
+		
+		_cache?.Store(Token.AccountId, Token, expirationMS: TokenInfo.CACHE_EXPIRATION);
+		
+		Graphite.Track(Token.IsAdmin
+				? "admin-tokens-validated"
+				: "tokens-validated", 1
+		);
 
 		return Ok(new RumbleJson
 		{

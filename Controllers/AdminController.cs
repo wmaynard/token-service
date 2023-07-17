@@ -22,6 +22,7 @@ public class AdminController : TokenAuthController
 	private readonly ApiService _apiService;
 	private readonly DynamicConfig _dynamicConfig;
 	private readonly CacheService _cache;
+	private readonly IdentityService _id;
 #pragma warning restore
 	
 	public AdminController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
@@ -36,37 +37,29 @@ public class AdminController : TokenAuthController
 
 		return Ok(new RumbleJson
 		{
-			{ "banned", id.Banned },
-			{ "expiration", id.BanExpiration }
+			{ "bans", id.Bans }
 		});
 	}
-	
-	[HttpPatch, Route("ban")]
-	public ActionResult Ban()
+
+	[HttpPost, Route("ban")]
+	public ActionResult Ban2()
 	{
-		// TODO: Optional<long>("duration")?
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
-
-		string accountId = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
-		long? durationInSeconds = Optional<long?>("duration");
 		
-		Identity id = _identityService.Find(accountId);
-		if (id.Banned)
-			Log.Warn(Owner.Default, "Tried to ban an already-banned user.  Using the longer of the two durations.", data: new { AccountId = id.AccountId, Admin = Token });
-		id.Banned = true;
-		id.BanExpiration = durationInSeconds != null
-			? Math.Max(id.BanExpiration, Timestamp.UnixTime + (long)durationInSeconds)
-			: default;
-		_identityService.Update(id);
+		string accountId = Optional<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
+		string[] accounts = accountId == null
+			? Require<string[]>($"{TokenInfo.FRIENDLY_KEY_ACCOUNT_ID}s")
+			: new[] { accountId };
 		
+		Ban ban = Require<Ban>("ban");
+		
+		_id.Ban(ban, accounts);
 		ClearCache(accountId);
-		
-		Log.Info(Owner.Default, "A user was banned.", data: new { AccountId = id.AccountId, Admin = Token });
-		
-		return Ok(id.ResponseObject);
+
+		return Ok();
 	}
-	
+
 	[HttpPatch, Route("invalidate")]
 	public ActionResult Invalidate()
 	{
@@ -117,9 +110,6 @@ public class AdminController : TokenAuthController
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
 		Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
-		if (!id.Banned)
-			Log.Warn(Owner.Default, "Tried to unban a user that wasn't banned.", data: new { AccountId = id.AccountId, Admin = Token});
-		id.Banned = false;
 		_identityService.Update(id);
 		
 		Log.Info(Owner.Default, "A user was unbanned.", data: new { AccountId = id.AccountId, Admin = Token });

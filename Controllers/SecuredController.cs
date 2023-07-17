@@ -1,15 +1,21 @@
+using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using MongoDB.Bson.Serialization.Attributes;
 using RCL.Logging;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Enums;
+using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Extensions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
+using Rumble.Platform.Data;
 using TokenService.Exceptions;
 using TokenService.Models;
 using TokenService.Services;
@@ -20,9 +26,18 @@ namespace TokenService.Controllers;
 public class SecuredController : TokenAuthController
 {
 	public const string KEY_ADMIN_SECRET = "key";
+	private const int STANDARD_PERMISSIONS = (int)Audience.All & -(int)(
+		Audience.Portal 
+		| Audience.AlertService
+		| Audience.DynamicConfigService
+		| Audience.Portal
+		| Audience.CalendarService
+		| Audience.InterviewService
+	);
 	
 #pragma warning disable
 	private readonly CacheService _cache;
+	private readonly IdentityService _id;
 #pragma warning restore
 	
 	public SecuredController(IdentityService identityService, IConfiguration config) : base(identityService, config) { }
@@ -42,21 +57,30 @@ public class SecuredController : TokenAuthController
 		string ipAddress = Optional<string>(TokenInfo.FRIENDLY_KEY_IP_ADDRESS);
 		string countryCode = Optional<string>(TokenInfo.FRIENDLY_KEY_COUNTRY_CODE);
 		string[] audience = Optional<string[]>(TokenInfo.FRIENDLY_KEY_AUDIENCE);
-
 		string secret = Optional<string>(KEY_ADMIN_SECRET); // if this is present, check to see if it matches for admin access
 		bool isAdmin = !string.IsNullOrWhiteSpace(secret) && secret == PlatformEnvironment.RumbleSecret;
+		int permissions = Optional<int?>(TokenInfo.FRIENDLY_KEY_PERMISSION_SET) ?? (isAdmin
+			? int.MaxValue
+			: STANDARD_PERMISSIONS);
 
-		Identity identity = _identityService.Find(id);
-		if (identity?.Banned ?? false)
-			throw new AuthException(token: null, "Account was banned."); // TODO: New exception type
+		Identity identity = _id.Find2(id);
+
+		if (identity == null)
+			throw new PlatformException("The identity for the given account ID is null. This should never happen.", code: ErrorCode.MongoRecordNotFound);
 
 		if (audience == null || (audience.Length > 1 && audience.Contains(wildcard)))
 			audience = new [] { wildcard };
 
+		int bannedFeatures = identity.Bans?.Any() ?? false
+			? identity
+				.Bans
+				.Select(ban => ban.PermissionSet)
+				.Aggregate((a, b) => a | b)
+			: 0;
+
 		TokenInfo info = new TokenInfo
 		{
 			AccountId = id,
-			Audience = audience.Distinct().OrderBy(_ => _).ToArray(),
 			ScreenName = screenName,
 			Discriminator = disc,
 			Email = email,
@@ -65,27 +89,20 @@ public class SecuredController : TokenAuthController
 			IpAddress = ipAddress,
 			GameKey = PlatformEnvironment.GameSecret,
 			CountryCode = countryCode,
-			Requester = origin
+			Requester = origin,
+			PermissionSet = bannedFeatures > 0
+				? permissions & ~bannedFeatures
+				: permissions,
+			Bans = identity.Bans
 		};
-
-		if (identity == null)
-		{
-			Log.Verbose(Owner.Default, "Token record created for account.", data: new { AccountId = id});
-			identity = new Identity(id, info, email);
-			_identityService.Create(identity);
-		}
 
 		Authorization auth = new Authorization(info, origin, lifetime, isAdmin);
 		info.Expiration = auth.Expiration;
-
 		identity.LatestUserInfo = info;
-		identity.Authorizations.Add(auth);
-		identity.Authorizations = identity.Authorizations.TakeLast(Identity.MAX_AUTHORIZATIONS_KEPT).ToList();
-		if (email != null)
-			identity.Email = email;
-		_identityService.Update(identity);
+
+		_id.AddAuthorization(identity, auth);
 		
-		_cache?.Store(info.AccountId, true, expirationMS: TokenInfo.CACHE_EXPIRATION);
+		_cache?.Store(info.AccountId, info, expirationMS: TokenInfo.CACHE_EXPIRATION);
 
 		return Ok(auth, info);
 	}

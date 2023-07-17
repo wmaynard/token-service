@@ -144,19 +144,27 @@ public class Authorization : PlatformDataModel
 			claims.TryGetValue(TokenInfo.DB_KEY_REQUESTER, out object requester);
 			claims.TryGetValue(TokenInfo.DB_KEY_ISSUED_AT, out object issuedAt);
 			claims.TryGetValue(TokenInfo.DB_KEY_GAME, out object gameKey);
+			claims.TryGetValue(TokenInfo.DB_KEY_PERMISSION_SET, out object perms);
 
-			string[] audience = Array.Empty<string>();
+			
 			try
 			{
-				audience = ((object[])audienceObject)
+				// Backwards compatibility for tokens generated prior to Bans V2.  Old tokens come in with an audience
+				// array.  If we don't see the new permissions key and this is specified, translate it into the new
+				// permissions.
+				string[] audience = ((object[])audienceObject)
 					.Select(obj => (string)obj)
 					.ToArray();
+				if (audience.Any())
+					perms ??= (int)Enum.GetValues<Audience>()
+						.Where(aud => audience.Contains(aud.GetDisplayName()))
+						.Aggregate((a, b) => a | b);
 			}
 			catch { }
 
 			TokenInfo output = new TokenInfo
 			{
-				Audience = audience,
+				// Audience = audience,
 				Authorization = token,
 				AccountId = (string) aid,
 				ScreenName = (string) sn,
@@ -169,7 +177,8 @@ public class Authorization : PlatformDataModel
 				IpAddress = (string) ip,
 				GameKey = (string) gameKey,
 				CountryCode = (string) countryCode,
-				Requester = (string) requester
+				Requester = (string) requester,
+				PermissionSet = (int)(perms ?? int.MaxValue)
 			};
 			if (output.Email != null)
 				output.Email = Crypto.Decode(output.Email);
@@ -222,7 +231,7 @@ public class Authorization : PlatformDataModel
 		claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
 		claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
 		claims.Add(TokenInfo.DB_KEY_ISSUED_AT, Timestamp.UnixTime);
-		claims.Add(TokenInfo.DB_KEY_AUDIENCE, info.Audience);
+		claims.Add(TokenInfo.DB_KEY_PERMISSION_SET, info.PermissionSet);
 
 		if (info.ScreenName != null)
 			claims.Add(TokenInfo.DB_KEY_SCREENNAME, info.ScreenName);

@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using MongoDB.Driver;
+using Rumble.Platform.Common.Minq;
+using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
 using Rumble.Platform.Common.Utilities;
 using Rumble.Platform.Common.Web;
@@ -8,34 +10,69 @@ using TokenService.Models;
 
 namespace TokenService.Services;
 
-public class IdentityService : PlatformMongoService<Identity>
+public class IdentityService : MinqService<Identity>
 {
 	public IdentityService() : base("identities") { }
 
-	public Identity Find(string accountId) => _collection.Find(i => i.AccountId == accountId).FirstOrDefault();
+	public Identity Find(string accountId) => mongo
+		.Where(query => query
+			.EqualTo(identity => identity.AccountId, accountId)
+		)
+		.FirstOrDefault();
 
-	public void UpdateAsync(Identity id) => _collection.ReplaceOneAsync(filter: identity => identity.Id == id.Id, replacement: id);
+	public Identity Find2(string accountId) => mongo
+		.Where(query => query
+			.EqualTo(identity => identity.AccountId, accountId)
+		)
+		.Upsert(query => query
+			.RemoveWhere(identity => identity.Bans, filter => filter
+				.LessThanOrEqualTo(ban => ban.Expiration, Timestamp.UnixTime)
+			)
+			.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
+		);
 
-	public long RemoveExpiredBans() => _collection.UpdateMany(
-		filter: identity => identity.Banned && identity.BanExpiration <= Timestamp.UnixTime,
-		update: Builders<Identity>.Update.Combine(updates: new []
-		{
-			Builders<Identity>.Update.Set(identity => identity.Banned, false),
-			Builders<Identity>.Update.Set(identity => identity.BanExpiration, default)
-		})
-	).ModifiedCount;
-
-	public long InvalidateAllPlayerTokens() => _collection.UpdateMany(
-		filter: Builders<Identity>.Filter.Eq(identity => identity.LatestUserInfo.IsAdmin, false),
-		update: Builders<Identity>.Update.Set(identity => identity.Authorizations, new List<Authorization>())
-	).ModifiedCount;
+	public long InvalidateAllPlayerTokens() => mongo
+		.Where(query => query.IsNot(identity => identity.LatestUserInfo.IsAdmin))
+		.Update(query => query.Set(identity => identity.Authorizations, new List<Authorization>()));
 
 	public long InvalidateAllTokens(bool includeAdminTokens, long? timestamp) => timestamp == null
 		? InvalidateAllPlayerTokens()
-		: _collection.UpdateMany(
-			filter: includeAdminTokens
-				? _ => true
-				: identity => !identity.LatestUserInfo.IsAdmin,
-			update: Builders<Identity>.Update.PullFilter(identity => identity.Authorizations, auth => auth.Created <= timestamp)
-		).ModifiedCount;
+		: (includeAdminTokens ? mongo.All() : mongo.Where(query => query.IsNot(identity => identity.LatestUserInfo.IsAdmin)))
+			.Update(query => query.RemoveWhere(
+				field: identity => identity.Authorizations,
+				filter => filter.LessThanOrEqualTo(auth => auth.Created, timestamp))
+			);
+
+	public void Ban(Ban ban, params string[] accounts)
+	{
+		Identity id = mongo
+			.WithTransaction(out Transaction transaction)
+			.Where(query => query.ContainedIn(identity => identity.AccountId, accounts))
+			.Upsert(query => query
+				.Clear(identity => identity.Authorizations)
+				.AddItems(identity => identity.Bans, limitToKeep: 200, ban)
+				.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
+			);
+
+		id.Bans = id
+			.Bans
+			.OrderBy(b => b.PermissionSet)
+			.ThenByDescending(b => b.Expiration ?? long.MaxValue)
+			.DistinctBy(b => b.PermissionSet)
+			.ToArray();
+
+		mongo
+			.WithTransaction(transaction)
+			.Update(id);
+		
+		transaction.Commit();
+	}
+
+	public void AddAuthorization(Identity id, Authorization jwt) => mongo
+		.Where(query => query.EqualTo(identity => identity.Id, id.Id))
+		.Update(query => query
+			.Set(identity => identity.LatestUserInfo, id.LatestUserInfo)
+			.Set(identity => identity.Email, id.Email)
+			.AddItems(identity => identity.Authorizations, limitToKeep: 10, jwt)
+		);
 }

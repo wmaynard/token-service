@@ -188,6 +188,7 @@ Bans in token service prior to Bans V2 required a PATCH request and could only r
 POST /admin/ban
 {
     "accountId": "deadbeefdeadbeefdeadbeef",
+    // "accountIds": [],
     "ban": {
         "permissions": 1,
         "expiration": 1689749545,
@@ -199,6 +200,8 @@ POST /admin/ban
 Only one ban per `permissions` value is tracked, and those that expire further in the future take precedence.  However, you can technically ban a player twice on the same Audience by using a combined `permissions` with bitwise operations.  Going back to our **Token Generation Example**, if you banned someone with permissions of `1` and `9`, this effectively bans a player _twice_ from Chat.  In order to restore a player's Chat functionality, both of these bans would need to expire or otherwise be removed.
 
 An `expiration` for a ban is a target Unix timestamp and may be omitted.  When this happens, the ban is indefinite.
+
+You can opt in to using `accountIds` to issue the same ban to multiple people at once.  If you use both `accountId` and `accountIds`, only `accountIds` is accepted.
 
 **Important note:** Whenever you issue a ban, make sure you keep the `reason` professional.  Since this is exposed on token validation, it is theoretically possible for a player who has hit our token-service to see the reason.  While it's unlikely, just assume that this is public information.
 

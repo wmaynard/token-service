@@ -55,7 +55,7 @@ public class AdminController : TokenAuthController
 		
 		Ban ban = Require<Ban>("ban");
 		
-		_id.Ban(ban, accounts);
+		_id.Ban(Token, ban, accounts);
 		ClearCache(accountId);
 
 		return Ok();

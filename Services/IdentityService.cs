@@ -43,7 +43,7 @@ public class IdentityService : MinqService<Identity>
 				filter => filter.LessThanOrEqualTo(auth => auth.Created, timestamp))
 			);
 
-	public void Ban(Ban ban, params string[] accounts)
+	public void Ban(TokenInfo token, Ban ban, params string[] accounts)
 	{
 		Identity id = mongo
 			.WithTransaction(out Transaction transaction)
@@ -65,6 +65,10 @@ public class IdentityService : MinqService<Identity>
 		mongo
 			.WithTransaction(transaction)
 			.Update(id);
+		
+		PlatformService
+			.Optional<BanHistoryService>()
+			?.Store(transaction, token, accounts, ban);
 		
 		transaction.Commit();
 	}

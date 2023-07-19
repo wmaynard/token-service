@@ -23,7 +23,7 @@ It's important to note that when you generate a new token, previously-issued tok
 |     AccountID (aid) | With regards to player accounts, this refers to their MongoDB-generated key.  For administrators, this is a user-defined unique identifier.                                                                                    |
 |            Audience | An array of unique resource IDs that indicate a token is allowed to access that particular resource.                                                                                                                           |
 |       Authorization | An HTTP header in web requests in the form of `Bearer {token}`, where "token" is a generated JWT from Token Service.                                                                                                           |
-|                 Ban | Completely bans the **AccountId** in question.  Regardless of the authorization granted to them, a banned account will fail all validation.                                                                                    |
+|                 Ban | See BANS.md for specific documentation.                                                                                                                                                                                        |
 |            Game Key | Each game has a unique key that's used to identify it.  When a token is generated, it is linked to a specific resource by a key like this.                                                                                     |
 |          Invalidate | Marks every issued token as invalid.  When a consumer tries to access an API with an invalid token, they will receive an error.  They will need to generate a new token to continue using our services.                        |
 |             Request | An HTTP request.                                                                                                                                                                                                               |
@@ -50,17 +50,17 @@ Every secured endpoint requires an `Authorization` header with a value of `Beare
 
 | Method | Endpoint        | Description                                  | Required | Optional | Internal Consumers | External Consumers |
 |-------:|:----------------|:---------------------------------------------|:---------|:---------|:-------------------|:-------------------|
-|    GET | `/token/health` | Health check, required by the load balancer. |          |          | Load balancer      ||
+|    GET | `/token/health` | Health check, required by the load balancer. |          |          | Load balancer      |                    |
 
 ## Admin
 
 All `/admin` endpoints require a valid admin token.
 
-| Method | Endpoint                  | Description                                     | Required | Optional   | Internal Consumers | External Consumers |
-|-------:|:--------------------------|:------------------------------------------------|:---------|:-----------|:-------------------|:-------------------|
-|  PATCH | `/token/admin/ban`        | Bans an account from all services.              | `aid`    | `duration` | Portal             |                    |
-|  PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `aid`    |            | Portal             |                    | 
-|  PATCH | `/token/admin/unban`      | Removes a ban from an account.                  | `aid`    |            | Portal             |                    |
+| Method | Endpoint                  | Description                                     | Required    | Optional     | Internal Consumers | External Consumers |
+|-------:|:--------------------------|:------------------------------------------------|:------------|:-------------|:-------------------|:-------------------|
+|   POST | `/token/admin/ban`        | Bans an account from specific services.         | `accountId` | `expiration` | Portal             |                    |
+|  PATCH | `/token/admin/invalidate` | Invalidates all existing tokens for an account. | `accountId` |              | Portal             |                    | 
+|  PATCH | `/token/admin/unban`      | Removes a ban from an account.                  | `accountId` |              | Portal             |                    |
 
 ## TopController
 
@@ -78,12 +78,12 @@ Both of these fields are used to add important detail to logs when auth exceptio
 
 All `/secured` endpoints are protected by whitelisted IP addresses when deployed.  This whitelist can be found in the `/.gitlab/dev.values.yaml` file, under the application whitelist section.
 
-| Method | Endpoint                  | Description                                              | Required            | Optional                                                                              | Internal Consumers              | External Consumers |
-|-------:|:--------------------------|:---------------------------------------------------------|:--------------------|:--------------------------------------------------------------------------------------|:--------------------------------|:-------------------|
-|   POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `aid`<br />`origin` | `audience`<br />`days`<br />`discriminator`<br />`email`<br />`key`<br />`screenname` | player-service<br />dmz-service |                    |
+| Method | Endpoint                  | Description                                              | Required                  | Optional                                                                              | Internal Consumers              | External Consumers |
+|-------:|:--------------------------|:---------------------------------------------------------|:--------------------------|:--------------------------------------------------------------------------------------|:--------------------------------|:-------------------|
+|   POST | `/secured/token/generate` | Creates a token with account information embedded in it. | `accountId`<br />`origin` | `audience`<br />`days`<br />`discriminator`<br />`email`<br />`key`<br />`screenname` | player-service<br />dmz-service |                    |
 
 ### Parameter breakdown for `/generateToken`:
-* `aid`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
+* `accountId`: The Mongo-issued AccountId for players, or a unique identifier for the Rumble product / user requesting it.
 * `audience`: This is an array of resource IDs indicating where a token is valid.  Within platform, this is maintained in platform-common/enums/Project.cs.  A wildcard may be used to grant access to all resources.
 * `days`: The number of days the token should be valid for.  The maximum value for this variable for non-admin tokens is 5 and for admin tokens is 3650 (ten years); larger values will be ignored.
 * `email`: The email address for an account.  This value is stored in Mongo along with the account.  It is embedded in the token as an encrypted value.

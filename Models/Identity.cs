@@ -23,6 +23,7 @@ public class Identity : PlatformCollectionDocument
 	internal const string DB_KEY_INITIAL_USER_INFO = "iwho";
 	internal const string DB_KEY_LATEST_USER_INFO = "who";
 	internal const string DB_KEY_TOKENS = "tkn";
+	internal const string DB_KEY_UPDATED_ON = "upd";
 
 	public const string FRIENDLY_KEY_AUTH_ATTEMPTS = "authorizations";
 	public const string FRIENDLY_KEY_BANNED = "banned";
@@ -73,6 +74,10 @@ public class Identity : PlatformCollectionDocument
 	[BsonElement(DB_KEY_FAILED_AUTH_ATTEMPTS), BsonIgnoreIfDefault]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_FAILED_AUTH_ATTEMPTS), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
 	public long FailedAuthAttempts { get; internal set; }
+	
+	[BsonElement(DB_KEY_UPDATED_ON)]
+	[JsonIgnore]
+	public long UpdatedOn { get; internal set; }
 	
 	[BsonElement(DB_KEY_INITIAL_USER_INFO)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INITIAL_USER_INFO)]

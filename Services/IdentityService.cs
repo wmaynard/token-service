@@ -52,6 +52,7 @@ public class IdentityService : MinqService<Identity>
 				.Clear(identity => identity.Authorizations)
 				.AddItems(identity => identity.Bans, limitToKeep: 200, ban)
 				.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
+				.SetToCurrentTimestamp(identity => identity.UpdatedOn)
 			);
 
 		id.Bans = id
@@ -66,6 +67,21 @@ public class IdentityService : MinqService<Identity>
 			.Update(id);
 		
 		transaction.Commit();
+	}
+
+	/// <summary>
+	/// Removes a ban from an account.  Returns true if the account was modified.
+	/// </summary>
+	/// <param name="accountId">The account to remove a ban from.</param>
+	/// <param name="banIds">One or more </param>
+	/// <returns></returns>
+	public bool Unban(string accountId, string[] banIds)
+	{
+		if (banIds == null || !banIds.Any())
+			return false;
+		return mongo
+			.Where(query => query.EqualTo(identity => identity.AccountId, accountId))
+			.Update(query => query.RemoveWhere(identity => identity.Bans, filter => filter.ContainedIn(ban => ban.Id, banIds))) > 0;
 	}
 
 	public void AddAuthorization(Identity id, Authorization jwt) => mongo

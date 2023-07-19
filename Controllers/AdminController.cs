@@ -3,6 +3,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using RCL.Logging;
+using Rumble.Platform.Common.Enums;
 using Rumble.Platform.Common.Exceptions;
 using Rumble.Platform.Common.Models;
 using Rumble.Platform.Common.Services;
@@ -42,7 +43,7 @@ public class AdminController : TokenAuthController
 	}
 
 	[HttpPost, Route("ban")]
-	public ActionResult Ban2()
+	public ActionResult Ban()
 	{
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
@@ -109,12 +110,17 @@ public class AdminController : TokenAuthController
 	{
 		if (!Token.IsAdmin)
 			throw new AuthException(Token, "Admin privileges required.");
-		Identity id = _identityService.Find(Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID));
-		_identityService.Update(id);
-		
-		Log.Info(Owner.Default, "A user was unbanned.", data: new { AccountId = id.AccountId, Admin = Token });
-		
-		return Ok(id.ResponseObject);
+
+		string accountId = Require<string>(TokenInfo.FRIENDLY_KEY_ACCOUNT_ID);
+		string[] banIds = Require<string[]>("banIds");
+
+		if (!banIds.Any())
+			throw new PlatformException("No banIds specified.", code: ErrorCode.RequiredFieldMissing);
+
+		if (!_identityService.Unban(accountId, banIds))
+			throw new PlatformException("No bans removed.", code: ErrorCode.MongoRecordNotFound);
+
+		return Ok();
 	}
 
 	private void ClearCache(string accountId)

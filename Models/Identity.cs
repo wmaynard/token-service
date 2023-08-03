@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
@@ -77,7 +78,7 @@ public class Identity : PlatformCollectionDocument
 	
 	[BsonElement(DB_KEY_UPDATED_ON)]
 	[JsonIgnore]
-	public long UpdatedOn { get; internal set; }
+	public long LastAccessed { get; internal set; }
 	
 	[BsonElement(DB_KEY_INITIAL_USER_INFO)]
 	[JsonInclude, JsonPropertyName(FRIENDLY_KEY_INITIAL_USER_INFO)]
@@ -88,14 +89,19 @@ public class Identity : PlatformCollectionDocument
 	public TokenInfo LatestUserInfo { get; internal set; }
 	
 	public long CreatedOn { get; internal set; }
-	
-	public Identity(string accountId, TokenInfo initialInfo, string email = null)
+
+	public Identity()
+	{
+		Bans = Array.Empty<Ban>();
+		Authorizations = new List<Authorization>();
+	}
+
+	public Identity(string accountId, TokenInfo initialInfo, string email = null) : this()
 	{
 		AccountId = accountId;
 		AuthAttempts = 0;
 		FailedAuthAttempts = 0;
 		FailedAdminAuthAttempts = 0;
-		Authorizations = new List<Authorization>();
 		InitialUserInfo = initialInfo;
 		Email = email;
 	}

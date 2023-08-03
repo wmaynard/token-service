@@ -63,7 +63,7 @@ public class SecuredController : TokenAuthController
 			? int.MaxValue
 			: STANDARD_PERMISSIONS);
 
-		Identity identity = _id.Find2(id);
+		Identity identity = _id.Find(id);
 
 		if (identity == null)
 			throw new PlatformException("The identity for the given account ID is null. This should never happen.", code: ErrorCode.MongoRecordNotFound);

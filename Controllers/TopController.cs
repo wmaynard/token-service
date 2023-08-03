@@ -40,7 +40,7 @@ public class TopController : TokenAuthController
 		if (Token.IsExpired)
 			throw new AuthException(Token, origin, endpoint, "Token has expired.");
 
-		Identity id = _identityService.Find2(Token.AccountId);
+		Identity id = _identityService.Find(Token.AccountId);
 		Authorization authorization = id.Authorizations.FirstOrDefault(auth => auth.Expiration == Token.Expiration && auth.EncryptedToken == Token.Authorization);
 		
 		if (authorization == null)

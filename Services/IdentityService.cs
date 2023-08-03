@@ -18,16 +18,11 @@ public class IdentityService : MinqService<Identity>
 		.Where(query => query
 			.EqualTo(identity => identity.AccountId, accountId)
 		)
-		.FirstOrDefault();
-
-	public Identity Find2(string accountId) => mongo
-		.Where(query => query
-			.EqualTo(identity => identity.AccountId, accountId)
-		)
 		.Upsert(query => query
 			.RemoveWhere(identity => identity.Bans, filter => filter
 				.LessThanOrEqualTo(ban => ban.Expiration, Timestamp.UnixTime)
 			)
+			.Set(identity => identity.LastAccessed, Timestamp.UnixTime)
 			.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
 		);
 
@@ -52,7 +47,7 @@ public class IdentityService : MinqService<Identity>
 				.Clear(identity => identity.Authorizations)
 				.AddItems(identity => identity.Bans, limitToKeep: 200, ban)
 				.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
-				.SetToCurrentTimestamp(identity => identity.UpdatedOn)
+				.SetToCurrentTimestamp(identity => identity.LastAccessed)
 			);
 
 		id.Bans = id
@@ -66,9 +61,7 @@ public class IdentityService : MinqService<Identity>
 			.WithTransaction(transaction)
 			.Update(id);
 		
-		PlatformService
-			.Optional<BanHistoryService>()
-			?.Store(transaction, token, accounts, ban);
+		Optional<BanHistoryService>()?.Store(transaction, token, accounts, ban);
 		
 		transaction.Commit();
 	}

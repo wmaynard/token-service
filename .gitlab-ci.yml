@@ -122,7 +122,7 @@ build_image:
   allow_failure: false
   needs: ["build_app"]
   image:
-    name: gcr.io/kaniko-project/executor:debug
+    name: "$KANIKO_IMAGE"
     entrypoint: [""]
   script:
     - mkdir -p /kaniko/.docker

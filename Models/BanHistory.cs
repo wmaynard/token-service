@@ -21,6 +21,6 @@ public class BanHistory : PlatformCollectionDocument
 
     public BanHistory()
     {
-        IssuedAt ??= Timestamp.UnixTime;
+        IssuedAt ??= Timestamp.Now;
     }
 }

@@ -20,10 +20,10 @@ public class IdentityService : MinqService<Identity>
 		)
 		.Upsert(query => query
 			.RemoveWhere(identity => identity.Bans, filter => filter
-				.LessThanOrEqualTo(ban => ban.Expiration, Timestamp.UnixTime)
+				.LessThanOrEqualTo(ban => ban.Expiration, Timestamp.Now)
 			)
-			.Set(identity => identity.LastAccessed, Timestamp.UnixTime)
-			.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
+			.Set(identity => identity.LastAccessed, Timestamp.Now)
+			.SetOnInsert(identity => identity.CreatedOn, Timestamp.Now)
 		);
 
 	public long InvalidateAllPlayerTokens() => mongo
@@ -46,7 +46,7 @@ public class IdentityService : MinqService<Identity>
 			.Upsert(query => query
 				.Clear(identity => identity.Authorizations)
 				.AddItems(identity => identity.Bans, limitToKeep: 200, ban)
-				.SetOnInsert(identity => identity.CreatedOn, Timestamp.UnixTime)
+				.SetOnInsert(identity => identity.CreatedOn, Timestamp.Now)
 				.SetToCurrentTimestamp(identity => identity.LastAccessed)
 			);
 

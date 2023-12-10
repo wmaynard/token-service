@@ -184,7 +184,7 @@ public class Authorization : PlatformDataModel
 				output.Email = Crypto.Decode(output.Email);
 			
 			// Begin validation; if the token fails any necessary criteria, throw auth exceptions.
-			if (output.Expiration <= Timestamp.UnixTime)
+			if (output.Expiration <= Timestamp.Now)
 				throw new AuthException(output, "Token is expired.");
 
 			// TODO: Remove this by 12/1.
@@ -230,7 +230,7 @@ public class Authorization : PlatformDataModel
 		claims.Add(TokenInfo.DB_KEY_ACCOUNT_ID, info.AccountId);
 		claims.Add(TokenInfo.DB_KEY_EXPIRATION, info.Expiration);
 		claims.Add(TokenInfo.DB_KEY_ISSUER, ISSUER);
-		claims.Add(TokenInfo.DB_KEY_ISSUED_AT, Timestamp.UnixTime);
+		claims.Add(TokenInfo.DB_KEY_ISSUED_AT, Timestamp.Now);
 		claims.Add(TokenInfo.DB_KEY_PERMISSION_SET, info.PermissionSet);
 
 		if (info.ScreenName != null)

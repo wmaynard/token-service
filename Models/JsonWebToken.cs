@@ -36,7 +36,7 @@ public class JsonWebToken : PlatformDataModel
 			throw new PlatformStartupException("Unable to complete request: RSA keys are missing.");
 		
 		RSAParameters rsaParams;
-		using (StringReader rdr = new StringReader(PRIVATE_KEY))
+		using (StringReader rdr = new (PRIVATE_KEY))
 		{
 			PemReader pemReader = new PemReader(rdr);
 			AsymmetricCipherKeyPair keyPair = (AsymmetricCipherKeyPair)pemReader.ReadObject()

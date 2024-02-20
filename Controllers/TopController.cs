@@ -53,8 +53,8 @@ public class TopController : TokenAuthController
 		_cache?.Store(Token.AccountId, Token, expirationMS: TokenInfo.CACHE_EXPIRATION);
 		
 		Graphite.Track(Token.IsAdmin
-				? "admin-tokens-validated"
-				: "tokens-validated", 1
+			? "admin-tokens-validated"
+			: "tokens-validated", 1
 		);
 
 		return Ok(new RumbleJson

@@ -22,7 +22,7 @@ public class AuthException : PlatformException
 	public TokenInfo TokenInfo { get; private set; }
 	public string Origin { get; private set; }
 	[JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-	public string Endpoint { get; private set; }
+	public string OriginEndpoint { get; private set; }
 	
 	// TODO: These details do not show up in logs, requires fix in platform-common
 	public AuthException(TokenInfo token, string reason) : base(reason ?? "Token is invalid.")
@@ -36,7 +36,7 @@ public class AuthException : PlatformException
 	public AuthException(TokenInfo token, string origin, string endpoint, string reason) : this(token, reason)
 	{
 		Origin = origin;
-		Endpoint = endpoint;
+		OriginEndpoint = endpoint;
 	}
 
 	public AuthException(string encryptedToken, string reason) : this(token: null, reason)

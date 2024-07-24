@@ -4,8 +4,7 @@ using System.Text.Json.Serialization;
 using MongoDB.Bson.Serialization.Attributes;
 using Rumble.Platform.Common.Attributes;
 using Rumble.Platform.Common.Models;
-using Rumble.Platform.Common.Web;
-using Rumble.Platform.Data;
+using Rumble.Platform.Common.Utilities.JsonTools;
 
 namespace TokenService.Models;
 

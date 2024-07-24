@@ -2,6 +2,22 @@
 
 An API for authenticating users
 
+## Acknowledgment
+
+Token Service was originally created for Rumble Entertainment (which later became R Studios), a mobile gaming company.  The service was responsible for generating and validating all of our tokens for use with our API calls.  Tokens could be either Player or Admin tokens with dynamic permissions assigned to them.
+
+R Studios unfortunately closed its doors in July 2024.  This project has been released as open source with permission.
+
+As of this writing, there may still be existing references to Rumble's resources, such as Confluence links, but their absence doesn't have any significant impact.  Some documentation will also be missing until it can be recreated here, since with the company closure any feature specs and explainer articles originally written for Confluence / Slack channels were lost.
+
+While Rumble is shutting down, I'm grateful for the opportunities and human connections I had working there.
+
+One Confluence article was saved as PDF explaining how our player accounts work and how our player data was organized.  You can read it [here](Player%20Accounts%20Overview.pdf).  I wrote this article as a detailed explainer piece for our legal and compliance team.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE.txt) file for details.
+
 # Introduction
 
 The Token Service is the entry point for all Platform services that require authentication.  Consumers of this service can request a JSON Web Token (JWT, or simply "token" in this document), which contains information embedded in it that can be used to uniquely identify a user.  Every token is signed and validated by Token Service with a secret key, which guarantees we know the token can be trusted.
